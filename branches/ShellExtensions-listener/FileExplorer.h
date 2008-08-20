@@ -66,7 +66,7 @@ public:
     FileExplorer(wxWindow *parent,wxWindowID id = wxID_ANY,
         const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize,
         long style = wxTAB_TRAVERSAL|wxTE_PROCESS_ENTER, const wxString& name = _T("Files"));
-    ~FileExplorer() { WriteConfig(); }
+    ~FileExplorer() { WriteConfig(); delete m_updater; }
     bool SetRootFolder(wxString root);
     wxString GetRootFolder() {return m_root;}
     void FindFile(const wxString &file) {}
@@ -101,6 +101,8 @@ private:
     void OnEndDragTreeItem(wxTreeEvent &event);
     void OnAddToProject(wxCommandEvent &event);
 
+    void OnUpdateTreeItems(wxCommandEvent &event);
+
 
     void WriteConfig();
     void ReadConfig();
@@ -127,7 +129,9 @@ private:
     wxButton *m_UpButton;
     bool m_show_hidden;
     wxArrayTreeItemIds m_selectti; //contains selections after context menu is called up
+    wxTreeItemId m_updating_node;
     FavoriteDirs m_favdirs;
+    FileExplorerUpdater *m_updater;
     int m_ticount; //number of selections
     wxString m_dragtest;
     size_t m_findmatchcount;

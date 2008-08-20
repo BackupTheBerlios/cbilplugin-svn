@@ -36,6 +36,7 @@ typedef std::vector<FileData> FileDataVec;
 
 class FileExplorerUpdater: public wxThread
 {
+public:
     FileExplorerUpdater(FileExplorer *fe) : wxThread(wxTHREAD_JOINABLE) { m_fe=fe; return;}
     FileDataVec m_adders;
     FileDataVec m_removers;

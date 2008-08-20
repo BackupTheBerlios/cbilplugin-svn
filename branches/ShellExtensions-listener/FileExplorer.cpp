@@ -123,6 +123,7 @@ FileExplorer::FileExplorer(wxWindow *parent,wxWindowID id,
     long style, const wxString& name):
     wxPanel(parent,id,pos,size,style, name)
 {
+    m_updater=new FileExplorerUpdater(this);
     m_show_hidden=false;
     m_parse_cvs=false;
     m_parse_hg=false;
@@ -268,6 +269,45 @@ void FileExplorer::Refresh(wxTreeItemId ti)
     GetExpandedNodes(ti,&e);
     RecursiveRebuild(ti,&e);
 }
+
+void FileExplorer::OnUpdateTreeItems(wxCommandEvent &e)
+{
+    m_Tree->Freeze();
+    wxTreeItemId ti=m_updating_node;
+    if(!ti.IsOk())
+    { //NODE WAS DELETED
+        //RESTART THE TIMER
+        return;
+    }
+//    m_Tree->DeleteChildren(ti);
+    //LOOP THROUGH THE REMOVERS LIST AND REMOVE THOSE ITEMS FROM THE TREE
+    FileDataVec &removers=m_updater->m_removers;
+    for(FileDataVec::iterator it=removers.begin();it!=removers.end();it++)
+    {
+        wxTreeItemIdValue cookie;
+        wxTreeItemId ch=m_Tree->GetFirstChild(ti,cookie);
+        while(ch.IsOk())
+        {
+            if(it->name==m_Tree->GetItemText(ch))
+            {
+                m_Tree->Delete(ch);
+                break;
+            }
+            ch=m_Tree->GetNextChild(ti,cookie);
+        }
+    }
+    //LOOP THROUGH THE ADDERS LIST AND ADD THOSE ITEMS FROM THE TREE
+    FileDataVec &adders=m_updater->m_adders;
+    for(FileDataVec::iterator it=adders.begin();it!=adders.end();it++)
+    {
+        wxTreeItemId newitem=m_Tree->AppendItem(ti,it->name,it->state);
+        m_Tree->SetItemHasChildren(newitem,it->state==fvsFolder);
+    }
+//    m_Tree->SortChildren(ti);
+    m_Tree->Thaw();
+    //RESTART THE TIMER
+}
+
 
 bool FileExplorer::AddTreeItems(const wxTreeItemId &ti)
 {

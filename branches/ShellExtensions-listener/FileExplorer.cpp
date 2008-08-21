@@ -4,10 +4,8 @@
 #include <vector>
 #include "se_globals.h"
 
-
 #include <wx/arrimpl.cpp> // this is a magic incantation which must be done!
 WX_DEFINE_OBJARRAY(VCSstatearray);
-
 
 int ID_UPDATETIMER=wxNewId();
 int ID_FILETREE=wxNewId();
@@ -126,8 +124,9 @@ FileExplorer::FileExplorer(wxWindow *parent,wxWindowID id,
     long style, const wxString& name):
     wxPanel(parent,id,pos,size,style, name)
 {
-    m_updater=new FileExplorerUpdater(this);
+    m_updater=NULL;
     m_updatetimer=new wxTimer(this,ID_UPDATETIMER);
+    m_update_active=false;
     m_show_hidden=false;
     m_parse_cvs=false;
     m_parse_hg=false;
@@ -297,63 +296,94 @@ void FileExplorer::RecursiveRebuild(wxTreeItemId ti,Expansion *exp)
 
 void FileExplorer::Refresh(wxTreeItemId ti)
 {
-    Expansion e;
-    GetExpandedNodes(ti,&e);
-    RecursiveRebuild(ti,&e);
+//    Expansion e;
+//    GetExpandedNodes(ti,&e);
+//    RecursiveRebuild(ti,&e);
+    m_updating_node=ti;//m_Tree->GetRootItem();
+    m_updatetimer->Start(10,true);
 }
 
 void FileExplorer::OnTimerCheckUpdates(wxTimerEvent &e)
 {
-    m_updating_node=GetNextExpandedNode(m_updating_node);
-    if(m_updater->IsAlive())
+    if(m_update_active)
     {
         //restart the timer -- shouldn't need to as it will happen in OnUpdateTreeItems
         //m_updatetimer->Start(3000,true);
         return;
     }
+    m_updater=new FileExplorerUpdater(this);
+    m_updated_node=m_updating_node;
+    m_update_active=true;
     m_updater->Update(m_updating_node);
 }
 
-
 void FileExplorer::OnUpdateTreeItems(wxCommandEvent &e)
 {
-    m_Tree->Freeze();
-    wxTreeItemId ti=m_updating_node;
+    m_updater->Wait();
+    wxTreeItemId ti=m_updated_node;
+//    cbMessageBox(_T("Update Returned"));
     if(!ti.IsOk())
     { //NODE WAS DELETED - REFRESH NOW!
+        m_updater->Delete();
+        m_updater=NULL;
+        m_update_active=false;
+        m_updating_node=GetNextExpandedNode(m_updating_node);
         m_updatetimer->Start(10,true);
         return;
     }
+//    cbMessageBox(_T("Node OK"));
 //    m_Tree->DeleteChildren(ti);
-    //LOOP THROUGH THE REMOVERS LIST AND REMOVE THOSE ITEMS FROM THE TREE
     FileDataVec &removers=m_updater->m_removers;
-    for(FileDataVec::iterator it=removers.begin();it!=removers.end();it++)
-    {
-        wxTreeItemIdValue cookie;
-        wxTreeItemId ch=m_Tree->GetFirstChild(ti,cookie);
-        while(ch.IsOk())
-        {
-            if(it->name==m_Tree->GetItemText(ch))
-            {
-                m_Tree->Delete(ch);
-                break;
-            }
-            ch=m_Tree->GetNextChild(ti,cookie);
-        }
-    }
-    //LOOP THROUGH THE ADDERS LIST AND ADD THOSE ITEMS FROM THE TREE
     FileDataVec &adders=m_updater->m_adders;
-    for(FileDataVec::iterator it=adders.begin();it!=adders.end();it++)
+    if(removers.size()>0||adders.size()>0)
     {
-        wxTreeItemId newitem=m_Tree->AppendItem(ti,it->name,it->state);
-        m_Tree->SetItemHasChildren(newitem,it->state==fvsFolder);
+        m_Tree->Freeze();
+        //LOOP THROUGH THE REMOVERS LIST AND REMOVE THOSE ITEMS FROM THE TREE
+    //    cbMessageBox(_T("Removers"));
+        for(FileDataVec::iterator it=removers.begin();it!=removers.end();it++)
+        {
+    //        cbMessageBox(it->name);
+            wxTreeItemIdValue cookie;
+            wxTreeItemId ch=m_Tree->GetFirstChild(ti,cookie);
+            while(ch.IsOk())
+            {
+                if(it->name==m_Tree->GetItemText(ch))
+                {
+                    m_Tree->Delete(ch);
+                    break;
+                }
+                ch=m_Tree->GetNextChild(ti,cookie);
+            }
+        }
+        //LOOP THROUGH THE ADDERS LIST AND ADD THOSE ITEMS FROM THE TREE
+    //    cbMessageBox(_T("Adders"));
+        for(FileDataVec::iterator it=adders.begin();it!=adders.end();it++)
+        {
+    //        cbMessageBox(it->name);
+            wxTreeItemId newitem=m_Tree->AppendItem(ti,it->name,it->state);
+            m_Tree->SetItemHasChildren(newitem,it->state==fvsFolder);
+        }
+    //    m_Tree->SortChildren(ti);
+        m_Tree->Thaw();
     }
-//    m_Tree->SortChildren(ti);
-    m_Tree->Thaw();
+    if(!m_Tree->IsExpanded(ti))
+        m_Tree->Expand(ti);
     //RESTART THE TIMER
-    m_updatetimer->Start(3000,true);
+    m_update_active=false;
+    if(m_updating_node!=m_updated_node)
+        m_updatetimer->Start(10,true);
+    else
+    {
+        //TODO: If the next node is not root, use a shorter delay
+        m_updating_node=GetNextExpandedNode(m_updating_node);
+        if(m_updating_node!=m_Tree->GetRootItem())
+            m_updatetimer->Start(10,true);
+        else
+            m_updatetimer->Start(3000,true);
+    }
+    m_updater->Delete();
+    m_updater=NULL;
 }
-
 
 bool FileExplorer::AddTreeItems(const wxTreeItemId &ti)
 {
@@ -440,7 +470,6 @@ bool FileExplorer::AddTreeItems(const wxTreeItemId &ti)
     return true;
 }
 
-
 void FileExplorer::SetImages()
 {
     static const wxString imgs[] = {
@@ -518,7 +547,12 @@ wxString FileExplorer::GetFullPath(const wxTreeItemId &ti)
 
 void FileExplorer::OnExpand(wxTreeEvent &event)
 {
-    AddTreeItems(event.GetItem());
+    if(m_updated_node==event.GetItem())
+        return;
+    m_updating_node=event.GetItem();//GetNextExpandedNode(m_updating_node);
+    m_updatetimer->Start(10,true);
+    event.Veto();
+    //AddTreeItems(event.GetItem());
 }
 
 void FileExplorer::ReadConfig()
@@ -709,7 +743,6 @@ void FileExplorer::OnSetLoc(wxCommandEvent &event)
         m_Loc->Delete(10+m_favdirs.GetCount());
 }
 
-
 void FileExplorer::OnOpenInEditor(wxCommandEvent &event)
 {
     for(int i=0;i<m_ticount;i++)
@@ -871,7 +904,6 @@ void FileExplorer::OnNewFile(wxCommandEvent &event)
     else
         cbMessageBox(_T("File/Directory Already Exists with Name ")+name, _T("Error"));
 }
-
 
 void FileExplorer::OnAddFavorite(wxCommandEvent &event)
 {
@@ -1234,7 +1266,6 @@ void FileExplorer::OnEndDragTreeItem(wxTreeEvent &event)
     Refresh(m_Tree->GetRootItem());
 }
 
-
 void FileExplorer::OnAddToProject(wxCommandEvent &event)
 {
     wxArrayString files;
@@ -1317,7 +1348,6 @@ bool FileExplorer::ParseSVNstate(const wxString &path, VCSstatearray &sa)
     return true;
 }
 
-
 bool FileExplorer::ParseBZRstate(const wxString &path, VCSstatearray &sa)
 {
     wxString parent=path;
@@ -1388,7 +1418,6 @@ bool FileExplorer::ParseBZRstate(const wxString &path, VCSstatearray &sa)
     return true;
 }
 
-
 bool FileExplorer::ParseHGstate(const wxString &path, VCSstatearray &sa)
 {
     wxString parent=path;
@@ -1444,7 +1473,6 @@ bool FileExplorer::ParseHGstate(const wxString &path, VCSstatearray &sa)
     }
     return true;
 }
-
 
 bool FileExplorer::ParseCVSstate(const wxString &path, VCSstatearray &sa)
 {

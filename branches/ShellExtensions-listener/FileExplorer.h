@@ -29,7 +29,6 @@ public:
 
 WX_DECLARE_OBJARRAY(VCSstate, VCSstatearray);
 
-
 class Expansion
 {
 public:
@@ -38,7 +37,6 @@ public:
     wxString name;
     ExpList children;
 };
-
 
 class FileTreeCtrl: public wxTreeCtrl
 {
@@ -58,7 +56,6 @@ protected:
     DECLARE_EVENT_TABLE()
 };
 
-
 class FileExplorer: public wxPanel
 {
     friend class FileExplorerUpdater;
@@ -66,7 +63,7 @@ public:
     FileExplorer(wxWindow *parent,wxWindowID id = wxID_ANY,
         const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize,
         long style = wxTAB_TRAVERSAL|wxTE_PROCESS_ENTER, const wxString& name = _T("Files"));
-    ~FileExplorer() { WriteConfig(); delete m_updater; }
+    ~FileExplorer() { WriteConfig(); if(m_updater) delete m_updater; }
     bool SetRootFolder(wxString root);
     wxString GetRootFolder() {return m_root;}
     void FindFile(const wxString &file) {}
@@ -136,6 +133,8 @@ private:
     wxTimer *m_updatetimer;
     FileExplorerUpdater *m_updater;
     wxTreeItemId m_updating_node;
+    wxTreeItemId m_updated_node;
+    bool m_update_active;
 
     int m_ticount; //number of selections
     wxString m_dragtest;

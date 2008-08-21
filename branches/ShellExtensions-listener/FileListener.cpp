@@ -7,9 +7,10 @@ DEFINE_EVENT_TYPE(wxEVT_NOTIFY_EXEC_REQUEST)
 
 void FileExplorerUpdater::Update(const wxTreeItemId &ti)
 {
-    wxString m_path=m_fe->GetFullPath(ti);
+    m_path=m_fe->GetFullPath(ti);
     GetTreeState(ti);
-    Run();
+    if(Create()==wxTHREAD_NO_ERROR)
+        Run();
 }
 
 void *FileExplorerUpdater::Entry()
@@ -25,7 +26,6 @@ void *FileExplorerUpdater::Entry()
 // Call from main thread prior to thread entry point
 void FileExplorerUpdater::GetTreeState(const wxTreeItemId &ti)
 {
-    m_fe->m_Tree->Freeze();
     wxTreeItemIdValue cookie;
     wxTreeItemId ch=m_fe->m_Tree->GetFirstChild(ti,cookie);
     m_treestate.clear();
@@ -37,7 +37,6 @@ void FileExplorerUpdater::GetTreeState(const wxTreeItemId &ti)
         m_treestate.push_back(fd);
         ch=m_fe->m_Tree->GetNextChild(ti,cookie);
     }
-    m_fe->m_Tree->Thaw();
 }
 
 
@@ -144,9 +143,11 @@ void FileExplorerUpdater::CalcChanges()
                 match=true;
                 if(it->state!=tree_it->state)
                 {
+//                    cbMessageBox(wxString::Format(_T("Conflicting state %s"),it->name.c_str()));
                     m_adders.push_back(*it);
                     m_removers.push_back(*tree_it);
                 }
+//                cbMessageBox(wxString::Format(_T("Already present %s"),it->name.c_str()));
                 m_currentstate.erase(it);
                 tree_it=m_treestate.erase(tree_it);
                 break;

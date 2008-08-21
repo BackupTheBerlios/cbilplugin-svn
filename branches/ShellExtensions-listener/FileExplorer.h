@@ -102,7 +102,7 @@ private:
     void OnAddToProject(wxCommandEvent &event);
 
     void OnUpdateTreeItems(wxCommandEvent &event);
-
+    void OnTimerCheckUpdates(wxTimerEvent &event);
 
     void WriteConfig();
     void ReadConfig();
@@ -118,6 +118,7 @@ private:
     bool AddTreeItems(const wxTreeItemId &ti);
     wxString GetFullPath(const wxTreeItemId &ti);
     void GetExpandedNodes(wxTreeItemId ti, Expansion *exp);
+    wxTreeItemId GetNextExpandedNode(wxTreeItemId ti);
     void RecursiveRebuild(wxTreeItemId ti, Expansion *exp);
     void Refresh(wxTreeItemId ti);
     void SetImages();
@@ -129,9 +130,13 @@ private:
     wxButton *m_UpButton;
     bool m_show_hidden;
     wxArrayTreeItemIds m_selectti; //contains selections after context menu is called up
-    wxTreeItemId m_updating_node;
     FavoriteDirs m_favdirs;
+
+    //State information required for updating the Tree in a background thread
+    wxTimer *m_updatetimer;
     FileExplorerUpdater *m_updater;
+    wxTreeItemId m_updating_node;
+
     int m_ticount; //number of selections
     wxString m_dragtest;
     size_t m_findmatchcount;

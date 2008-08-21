@@ -9,6 +9,7 @@
 WX_DEFINE_OBJARRAY(VCSstatearray);
 
 
+int ID_UPDATETIMER=wxNewId();
 int ID_FILETREE=wxNewId();
 int ID_FILELOC=wxNewId();
 int ID_FILEWILD=wxNewId();
@@ -85,6 +86,8 @@ int FileTreeCtrl::OnCompareItems(const wxTreeItemId& item1, const wxTreeItemId& 
 }
 
 BEGIN_EVENT_TABLE(FileExplorer, wxPanel)
+    EVT_TIMER(ID_UPDATETIMER, FileExplorer::OnTimerCheckUpdates)
+    EVT_COMMAND(0, wxEVT_NOTIFY_UPDATE_TREE, FileExplorer::OnUpdateTreeItems)
     EVT_TREE_BEGIN_DRAG(ID_FILETREE, FileExplorer::OnBeginDragTreeItem)
     EVT_TREE_END_DRAG(ID_FILETREE, FileExplorer::OnEndDragTreeItem)
     EVT_BUTTON(ID_FILE_UPBUTTON, FileExplorer::OnUpButton)
@@ -124,6 +127,7 @@ FileExplorer::FileExplorer(wxWindow *parent,wxWindowID id,
     wxPanel(parent,id,pos,size,style, name)
 {
     m_updater=new FileExplorerUpdater(this);
+    m_updatetimer=new wxTimer(this,ID_UPDATETIMER);
     m_show_hidden=false;
     m_parse_cvs=false;
     m_parse_hg=false;
@@ -229,6 +233,34 @@ void FileExplorer::FocusFile(const wxTreeItemId &ti)
     m_Tree->EnsureVisible(ti);
 }
 
+wxTreeItemId FileExplorer::GetNextExpandedNode(wxTreeItemId ti)
+{
+    wxTreeItemId next_ti;
+    if(!ti.IsOk())
+    {
+        return m_Tree->GetRootItem();
+    }
+    if(m_Tree->IsExpanded(ti))
+    {
+        wxTreeItemIdValue cookie;
+        next_ti=m_Tree->GetFirstChild(ti,cookie);
+        while(next_ti.IsOk())
+        {
+            if(m_Tree->IsExpanded(next_ti))
+                return next_ti;
+            next_ti=m_Tree->GetNextChild(ti,cookie);
+        }
+    }
+    next_ti=m_Tree->GetNextSibling(ti);
+    while(next_ti.IsOk())
+    {
+        if(m_Tree->IsExpanded(next_ti))
+            return next_ti;
+        next_ti=m_Tree->GetNextSibling(next_ti);
+    }
+    return m_Tree->GetRootItem();
+}
+
 void FileExplorer::GetExpandedNodes(wxTreeItemId ti, Expansion *exp)
 {
     exp->name=m_Tree->GetItemText(ti);
@@ -270,13 +302,26 @@ void FileExplorer::Refresh(wxTreeItemId ti)
     RecursiveRebuild(ti,&e);
 }
 
+void FileExplorer::OnTimerCheckUpdates(wxTimerEvent &e)
+{
+    m_updating_node=GetNextExpandedNode(m_updating_node);
+    if(m_updater->IsAlive())
+    {
+        //restart the timer -- shouldn't need to as it will happen in OnUpdateTreeItems
+        //m_updatetimer->Start(3000,true);
+        return;
+    }
+    m_updater->Update(m_updating_node);
+}
+
+
 void FileExplorer::OnUpdateTreeItems(wxCommandEvent &e)
 {
     m_Tree->Freeze();
     wxTreeItemId ti=m_updating_node;
     if(!ti.IsOk())
-    { //NODE WAS DELETED
-        //RESTART THE TIMER
+    { //NODE WAS DELETED - REFRESH NOW!
+        m_updatetimer->Start(10,true);
         return;
     }
 //    m_Tree->DeleteChildren(ti);
@@ -306,6 +351,7 @@ void FileExplorer::OnUpdateTreeItems(wxCommandEvent &e)
 //    m_Tree->SortChildren(ti);
     m_Tree->Thaw();
     //RESTART THE TIMER
+    m_updatetimer->Start(3000,true);
 }
 
 

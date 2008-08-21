@@ -52,6 +52,7 @@ private:
     wxMutex *m_exec_mutex;
     wxCondition *m_exec_cond;
     wxProcess *m_exec_proc;
+    wxInputStream *m_exec_stream;
     wxString m_exec_cmd;
     wxString m_path;
     virtual ExitCode Entry();

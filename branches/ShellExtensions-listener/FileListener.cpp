@@ -10,7 +10,10 @@ void FileExplorerUpdater::Update(const wxTreeItemId &ti)
     m_path=m_fe->GetFullPath(ti);
     GetTreeState(ti);
     if(Create()==wxTHREAD_NO_ERROR)
+    {
+        //SetPriority(20);
         Run();
+    }
 }
 
 void *FileExplorerUpdater::Entry()
@@ -74,12 +77,12 @@ bool FileExplorerUpdater::GetCurrentState(const wxString &path)
     if(m_fe->m_parse_hg && !is_vcs)
         if(ParseHGstate(path,sa))
             is_vcs=true;
-    if(m_fe->m_parse_cvs && !is_vcs)
+/*    if(m_fe->m_parse_cvs && !is_vcs)
         if(ParseCVSstate(path,sa))
         {
             is_vcs=true;
             is_cvs=true;
-        }
+        }*/
 
     bool cont = dir.GetFirst(&filename,wxEmptyString,flags);
     while ( cont )
@@ -167,21 +170,23 @@ int FileExplorerUpdater::Exec(const wxString &command, wxArrayString &output)
     m_exec_cond=new wxCondition(*m_exec_mutex);
     m_exec_cmd=command;
     m_exec_mutex->Lock();
+    ::wxMutexGuiEnter();
     wxCommandEvent ne(wxEVT_NOTIFY_EXEC_REQUEST,0);
     m_fe->AddPendingEvent(ne);
+    ::wxMutexGuiLeave();
     m_exec_cond->Wait();
     m_exec_mutex->Unlock();
     if(m_exec_cmd==_T(""))
         exitcode=1;
     else
     {
-        wxTextInputStream tis(*m_exec_proc->GetInputStream());
-        while(m_exec_proc->GetInputStream()->Peek())
+        wxTextInputStream tis(*m_exec_stream);
+        while(m_exec_stream->Peek())
             output.Add(tis.ReadLine());
     }
     delete m_exec_cond;
     delete m_exec_mutex;
-    m_exec_proc->Detach(); //TODO: delete if we process it's terminate event
+//    m_exec_proc->Detach(); //TODO: delete if we process its terminate event
     m_exec_proc=NULL;
     return exitcode;
     //Put this in the FileExplorer as a handler for wxEVT_NOTIFY_EXEC_REQUEST
@@ -195,13 +200,16 @@ int FileExplorerUpdater::Exec(const wxString &command, wxArrayString &output)
 void FileExplorerUpdater::ExecMain()
 {
     m_exec_mutex->Lock();
-    m_exec_proc=new wxProcess(m_fe);
+    m_exec_proc=new wxProcess();
     m_exec_proc->Redirect();
     int procid=wxExecute(m_exec_cmd,wxEXEC_ASYNC,m_exec_proc);
+//    m_exec_cmd=_T(""); //DELETE ME!
     if(procid<=0)
         m_exec_cmd=_T("");
-    m_exec_mutex->Unlock();
+    else
+        m_exec_stream=m_exec_proc->GetInputStream();
     m_exec_cond->Signal();
+    m_exec_mutex->Unlock();
 }
 
 bool FileExplorerUpdater::ParseSVNstate(const wxString &path, VCSstatearray &sa)

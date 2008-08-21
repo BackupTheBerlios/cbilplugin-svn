@@ -122,6 +122,12 @@
 			<Option target="default" />
 			<Option target="detachable" />
 		</Unit>
+		<Unit filename="FileListener.cpp">
+			<Option target="se-plugin" />
+		</Unit>
+		<Unit filename="FileListener.h">
+			<Option target="se-plugin" />
+		</Unit>
 		<Unit filename="PipedProcessCtrl.cpp">
 			<Option target="se-plugin" />
 		</Unit>

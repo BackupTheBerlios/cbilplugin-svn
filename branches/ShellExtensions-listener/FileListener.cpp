@@ -20,8 +20,10 @@ void *FileExplorerUpdater::Entry()
 {
     GetCurrentState(m_path);
     CalcChanges();
+    ::wxMutexGuiEnter();
     wxCommandEvent ne(wxEVT_NOTIFY_UPDATE_TREE,0);
     m_fe->AddPendingEvent(ne);
+    ::wxMutexGuiLeave();
     return NULL;
 }
 

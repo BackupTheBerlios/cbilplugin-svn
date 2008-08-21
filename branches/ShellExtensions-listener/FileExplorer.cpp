@@ -83,9 +83,11 @@ int FileTreeCtrl::OnCompareItems(const wxTreeItemId& item1, const wxTreeItemId& 
     return (GetItemText(item1).CmpNoCase(GetItemText(item2)));
 }
 
+
 BEGIN_EVENT_TABLE(FileExplorer, wxPanel)
     EVT_TIMER(ID_UPDATETIMER, FileExplorer::OnTimerCheckUpdates)
     EVT_COMMAND(0, wxEVT_NOTIFY_UPDATE_TREE, FileExplorer::OnUpdateTreeItems)
+    EVT_COMMAND(0, wxEVT_NOTIFY_EXEC_REQUEST, FileExplorer::OnExecRequest)
     EVT_TREE_BEGIN_DRAG(ID_FILETREE, FileExplorer::OnBeginDragTreeItem)
     EVT_TREE_END_DRAG(ID_FILETREE, FileExplorer::OnEndDragTreeItem)
     EVT_BUTTON(ID_FILE_UPBUTTON, FileExplorer::OnUpButton)
@@ -1519,4 +1521,9 @@ bool FileExplorer::ParseCVSstate(const wxString &path, VCSstatearray &sa)
         return true;
     else
         return false;
+}
+
+void FileExplorer::OnExecRequest(wxCommandEvent &event)
+{
+    m_updater->ExecMain();
 }

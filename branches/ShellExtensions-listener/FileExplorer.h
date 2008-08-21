@@ -100,6 +100,7 @@ private:
 
     void OnUpdateTreeItems(wxCommandEvent &event);
     void OnTimerCheckUpdates(wxTimerEvent &event);
+    void OnExecRequest(wxCommandEvent &event);
 
     void WriteConfig();
     void ReadConfig();

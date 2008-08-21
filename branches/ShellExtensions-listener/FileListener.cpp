@@ -186,7 +186,7 @@ int FileExplorerUpdater::Exec(const wxString &command, wxArrayString &output)
     }
     delete m_exec_cond;
     delete m_exec_mutex;
-//    m_exec_proc->Detach(); //TODO: delete if we process its terminate event
+    m_exec_proc->Detach(); //TODO: delete if we process its terminate event
     m_exec_proc=NULL;
     return exitcode;
     //Put this in the FileExplorer as a handler for wxEVT_NOTIFY_EXEC_REQUEST

@@ -171,6 +171,8 @@ bool FileExplorerUpdater::CalcChanges()
 int FileExplorerUpdater::Exec(const wxString &command, wxArrayString &output)
 {
     int exitcode=0;
+    m_exec_proc=new wxProcess();
+    m_exec_proc->Redirect();
     m_exec_mutex=new wxMutex();
     m_exec_cond=new wxCondition(*m_exec_mutex);
     m_exec_cmd=command;
@@ -181,38 +183,29 @@ int FileExplorerUpdater::Exec(const wxString &command, wxArrayString &output)
     ::wxMutexGuiLeave();
     m_exec_cond->Wait();
     m_exec_mutex->Unlock();
-    if(m_exec_cmd==_T(""))
+    delete m_exec_cond;
+    delete m_exec_mutex;
+    if(m_exec_proc_id==0)
         exitcode=1;
     else
     {
+        m_exec_stream=m_exec_proc->GetInputStream();
         wxTextInputStream tis(*m_exec_stream);
-        while(m_exec_stream->Peek())
-            output.Add(tis.ReadLine());
+//        while(m_exec_stream->Peek())
+//            output.Add(tis.ReadLine());
     }
-    delete m_exec_cond;
-    delete m_exec_mutex;
     m_exec_proc->Detach(); //TODO: delete if we process its terminate event
     m_exec_proc=NULL;
     return exitcode;
-    //Put this in the FileExplorer as a handler for wxEVT_NOTIFY_EXEC_REQUEST
-    //m_updater->m_exec_proc=new wxProcess(m_fe,ID_UPDATE_PROC);
-    //m_updater->m_exec_proc->Redirect();
-    //int procid=wxExecute(processcmd,wxEXEC_ASYNC,m_proc);
-    //m_updater->m_exec_cond->Signal();
-    //TODO: Respond to m_exec_proc termination??
 }
 
 void FileExplorerUpdater::ExecMain()
 {
     m_exec_mutex->Lock();
-    m_exec_proc=new wxProcess();
-    m_exec_proc->Redirect();
-    int procid=wxExecute(m_exec_cmd,wxEXEC_ASYNC,m_exec_proc);
+//    m_exec_proc=new wxProcess();
+//    m_exec_proc->Redirect();
+    m_exec_proc_id=wxExecute(m_exec_cmd,wxEXEC_ASYNC,m_exec_proc);
 //    m_exec_cmd=_T(""); //DELETE ME!
-    if(procid<=0)
-        m_exec_cmd=_T("");
-    else
-        m_exec_stream=m_exec_proc->GetInputStream();
     m_exec_cond->Signal();
     m_exec_mutex->Unlock();
 }

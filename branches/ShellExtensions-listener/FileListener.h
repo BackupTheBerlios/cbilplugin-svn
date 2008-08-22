@@ -54,6 +54,7 @@ private:
     wxCondition *m_exec_cond;
     wxProcess *m_exec_proc;
     wxInputStream *m_exec_stream;
+    int m_exec_proc_id;
     wxString m_exec_cmd;
     wxString m_path;
     wxString m_wildcard;

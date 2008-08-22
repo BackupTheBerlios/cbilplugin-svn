@@ -328,6 +328,14 @@
 			<Option target="se-plugin" />
 			<Option target="se-plugin-binary" />
 		</Unit>
+		<Unit filename="FileListener.cpp">
+			<Option target="se-plugin" />
+			<Option target="se-plugin-binary" />
+		</Unit>
+		<Unit filename="FileListener.h">
+			<Option target="se-plugin" />
+			<Option target="se-plugin-binary" />
+		</Unit>
 		<Unit filename="PipedProcessCtrl.cpp">
 			<Option target="se-plugin" />
 			<Option target="se-plugin-binary" />
@@ -417,7 +425,9 @@
 			<Option target="se-plugin-binary" />
 		</Unit>
 		<Extensions>
-			<code_completion />
+			<code_completion>
+				<search_path add="C:\GTK\include" />
+			</code_completion>
 			<envvars />
 			<debugger />
 		</Extensions>

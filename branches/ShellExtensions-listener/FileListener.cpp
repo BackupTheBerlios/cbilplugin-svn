@@ -7,19 +7,22 @@ DEFINE_EVENT_TYPE(wxEVT_NOTIFY_EXEC_REQUEST)
 
 void FileExplorerUpdater::Update(const wxTreeItemId &ti)
 {
-    m_path=m_fe->GetFullPath(ti);
+    m_path=wxString(m_fe->GetFullPath(ti).c_str());
+    m_wildcard=wxString(m_fe->m_WildCards->GetValue().c_str());
     GetTreeState(ti);
     if(Create()==wxTHREAD_NO_ERROR)
     {
-        //SetPriority(20);
+        SetPriority(20);
         Run();
     }
 }
 
 void *FileExplorerUpdater::Entry()
 {
-    GetCurrentState(m_path);
-    CalcChanges();
+    if(!GetCurrentState(m_path))
+        return NULL;
+    if(!CalcChanges())
+        return NULL;
     ::wxMutexGuiEnter();
     wxCommandEvent ne(wxEVT_NOTIFY_UPDATE_TREE,0);
     m_fe->AddPendingEvent(ne);
@@ -48,7 +51,7 @@ void FileExplorerUpdater::GetTreeState(const wxTreeItemId &ti)
 // called from Thread::Entry
 bool FileExplorerUpdater::GetCurrentState(const wxString &path)
 {
-    wxString wildcard=m_fe->m_WildCards->GetValue();
+    //wxString wildcard=m_fe->m_WildCards->GetValue();
 //    m_Tree->DeleteChildren(ti); //Don't delete everything, we will add new files/dirs, remove deleted files/dirs and update state of all other files.
 
     m_currentstate.clear();
@@ -87,7 +90,7 @@ bool FileExplorerUpdater::GetCurrentState(const wxString &path)
         }*/
 
     bool cont = dir.GetFirst(&filename,wxEmptyString,flags);
-    while ( cont )
+    while ( cont && !TestDestroy())
     {
         int itemstate;
         bool match=true;
@@ -117,7 +120,7 @@ bool FileExplorerUpdater::GetCurrentState(const wxString &path)
             }
             if(deli>=0)
                 sa.RemoveAt(deli);
-            if(!WildCardListMatch(wildcard,filename))
+            if(!WildCardListMatch(m_wildcard,filename))
                 match=false;
         }
         if(match)
@@ -129,16 +132,16 @@ bool FileExplorerUpdater::GetCurrentState(const wxString &path)
         }
         cont = dir.GetNext(&filename);
     }
-    return true;
+    return !TestDestroy();
 }
 
 
-void FileExplorerUpdater::CalcChanges()
+bool FileExplorerUpdater::CalcChanges()
 {
     m_adders.clear();
     m_removers.clear();
     FileDataVec::iterator tree_it=m_treestate.begin();
-    while(tree_it!=m_treestate.end())
+    while(tree_it!=m_treestate.end() && !TestDestroy())
     {
         bool match=false;
         for(FileDataVec::iterator it=m_currentstate.begin();it!=m_currentstate.end();it++)
@@ -161,7 +164,7 @@ void FileExplorerUpdater::CalcChanges()
         m_removers.push_back(*tree_it);
     for(FileDataVec::iterator it=m_currentstate.begin();it!=m_currentstate.end();it++)
         m_adders.push_back(*it);
-
+    return !TestDestroy();
 }
 
 

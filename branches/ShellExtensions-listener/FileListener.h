@@ -41,6 +41,7 @@ class FileExplorerUpdater: public wxThread
 public:
     FileExplorerUpdater(FileExplorer *fe) : wxThread(wxTHREAD_JOINABLE) { m_fe=fe;     m_exec_proc=NULL;
 return;}
+    ~FileExplorerUpdater() {if(IsRunning()) Delete();}
     FileDataVec m_adders;
     FileDataVec m_removers;
     void Update(const wxTreeItemId &ti); //call on main thread to do the background magic
@@ -55,6 +56,7 @@ private:
     wxInputStream *m_exec_stream;
     wxString m_exec_cmd;
     wxString m_path;
+    wxString m_wildcard;
     virtual ExitCode Entry();
     bool ParseBZRstate(const wxString &path, VCSstatearray &sa);
     bool ParseHGstate(const wxString &path, VCSstatearray &sa);
@@ -63,7 +65,7 @@ private:
     int Exec(const wxString &command, wxArrayString &output);
     void GetTreeState(const wxTreeItemId &ti);
     bool GetCurrentState(const wxString &path);
-    void CalcChanges(); //creates the vector of adders and removers
+    bool CalcChanges(); //creates the vector of adders and removers
 };
 
 

@@ -1482,6 +1482,8 @@ bool FileExplorer::ParseCVSstate(const wxString &path, VCSstatearray &sa)
     wxString wdir=wxGetCwd();
     wxSetWorkingDirectory(path);
     int hresult=::wxExecute(_T("cvs stat -q -l  ."),output,wxEXEC_SYNC);
+    if(hresult!=0)
+        return false;
     wxSetWorkingDirectory(wdir);
 //    if(hresult!=0)
 //        return false;

@@ -365,7 +365,7 @@ void FileExplorer::OnUpdateTreeItems(wxCommandEvent &e)
             wxTreeItemId newitem=m_Tree->AppendItem(ti,it->name,it->state);
             m_Tree->SetItemHasChildren(newitem,it->state==fvsFolder);
         }
-    //    m_Tree->SortChildren(ti);
+        m_Tree->SortChildren(ti);
         m_Tree->Thaw();
     }
     if(!m_Tree->IsExpanded(ti))

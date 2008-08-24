@@ -2,6 +2,8 @@
 #include "FileExplorer.h"
 #include "se_globals.h"
 
+
+
 DEFINE_EVENT_TYPE(wxEVT_NOTIFY_UPDATE_TREE)
 DEFINE_EVENT_TYPE(wxEVT_NOTIFY_EXEC_REQUEST)
 

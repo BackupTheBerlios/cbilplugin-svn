@@ -17,6 +17,56 @@ typedef std::map<GnomeVFSMonitorHandle *, wxFileSystemMonitor *> MonMap;
 
 static MonMap m;
 
+/*
+WIN32
+Before starting loop
+HANDLE WINAPI FindFirstChangeNotification(
+  __in  LPCTSTR lpPathName,
+  __in  BOOL bWatchSubtree,
+  __in  DWORD dwNotifyFilter
+);
+
+Enter loop, then wait
+DWORD WINAPI MsgWaitForMultipleObjects(
+  __in  DWORD nCount,
+  __in  const HANDLE *pHandles,
+  __in  BOOL bWaitAll,
+  __in  DWORD dwMilliseconds,
+  __in  DWORD dwWakeMask
+);
+
+Queue next wait
+BOOL WINAPI FindNextChangeNotification(
+  __in  HANDLE hChangeHandle
+);
+
+Clean up when done
+BOOL WINAPI FindCloseChangeNotification(
+  __in  HANDLE hChangeHandle
+);
+
+
+BOOL WINAPI ReadDirectoryChangesW(
+  __in         HANDLE hDirectory,
+  __out        LPVOID lpBuffer,
+  __in         DWORD nBufferLength,
+  __in         BOOL bWatchSubtree,
+  __in         DWORD dwNotifyFilter,
+  __out_opt    LPDWORD lpBytesReturned,
+  __inout_opt  LPOVERLAPPED lpOverlapped,
+  __in_opt     LPOVERLAPPED_COMPLETION_ROUTINE lpCompletionRoutine
+);
+
+lpBuffer contains:
+
+typedef struct _FILE_NOTIFY_INFORMATION {
+  DWORD NextEntryOffset;
+  DWORD Action;
+  DWORD FileNameLength;
+  WCHAR FileName[1];
+} FILE_NOTIFY_INFORMATION,
+ *PFILE_NOTIFY_INFORMATION;
+*/
 
 ///////////////////////////////////////
 // EVENT CODE /////////////////////////

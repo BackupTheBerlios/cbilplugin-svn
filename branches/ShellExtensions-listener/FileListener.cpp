@@ -192,9 +192,9 @@ int FileExplorerUpdater::Exec(const wxString &command, wxArrayString &output)
     else
     {
         m_exec_stream=m_exec_proc->GetInputStream();
-        wxTextInputStream tis(*m_exec_stream);
-        while(m_exec_stream->Peek()) //TODO: CRASHES ON WIN32 - FIND FIX
-            output.Add(tis.ReadLine());
+//        wxTextInputStream tis(*m_exec_stream);
+//        while(m_exec_stream->Peek()) //TODO: CRASHES ON WIN32 - FIND FIX
+//            output.Add(tis.ReadLine());
     }
     m_exec_proc->Detach(); //TODO: delete if we process its terminate event
     m_exec_proc=NULL;

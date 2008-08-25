@@ -205,8 +205,19 @@ void FileExplorerUpdater::ReadStream()
 {
     m_exec_stream=m_exec_proc->GetInputStream();
     wxTextInputStream tis(*m_exec_stream);
-    while(m_exec_stream->Peek()) //TODO: CRASHES ON WIN32 - FIND FIX
+    int count=0;
+    while(m_exec_stream->Peek() && count<200) //TODO: CRASHES ON WIN32 - FIND FIX
+    {
         output.Add(tis.ReadLine());
+        count++;
+    }
+    if(count>=200)
+    else
+    {
+        m_exec_mutex->Lock();
+        m_exec_cond->Signal();
+        m_exec_mutex->Unlock();
+    }
 }
 
 

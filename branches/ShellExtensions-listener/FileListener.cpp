@@ -173,29 +173,18 @@ bool FileExplorerUpdater::CalcChanges()
 int FileExplorerUpdater::Exec(const wxString &command, wxArrayString &output)
 {
     int exitcode=0;
-    m_exec_proc=new wxProcess();
-    m_exec_proc->Redirect();
     m_exec_mutex=new wxMutex();
     m_exec_cond=new wxCondition(*m_exec_mutex);
     m_exec_cmd=command;
     m_exec_mutex->Lock();
-    ::wxMutexGuiEnter();
     wxCommandEvent ne(wxEVT_NOTIFY_EXEC_REQUEST,0);
     m_fe->AddPendingEvent(ne);
-    ::wxMutexGuiLeave();
     m_exec_cond->Wait();
     m_exec_mutex->Unlock();
     delete m_exec_cond;
     delete m_exec_mutex;
     if(m_exec_proc_id==0)
         exitcode=1;
-    else
-    {
-        m_exec_stream=m_exec_proc->GetInputStream();
-//        wxTextInputStream tis(*m_exec_stream);
-//        while(m_exec_stream->Peek()) //TODO: CRASHES ON WIN32 - FIND FIX
-//            output.Add(tis.ReadLine());
-    }
     m_exec_proc->Detach(); //TODO: delete if we process its terminate event
     m_exec_proc=NULL;
     return exitcode;
@@ -203,11 +192,23 @@ int FileExplorerUpdater::Exec(const wxString &command, wxArrayString &output)
 
 void FileExplorerUpdater::ExecMain()
 {
+    m_exec_proc=new wxProcess();
+    m_exec_proc->Redirect();
     m_exec_mutex->Lock();
     m_exec_proc_id=wxExecute(m_exec_cmd,wxEXEC_ASYNC,m_exec_proc);
     m_exec_cond->Signal();
     m_exec_mutex->Unlock();
+    m_exec_timer->Start()
 }
+
+void FileExplorerUpdater::ReadStream()
+{
+    m_exec_stream=m_exec_proc->GetInputStream();
+    wxTextInputStream tis(*m_exec_stream);
+    while(m_exec_stream->Peek()) //TODO: CRASHES ON WIN32 - FIND FIX
+        output.Add(tis.ReadLine());
+}
+
 
 bool FileExplorerUpdater::ParseSVNstate(const wxString &path, VCSstatearray &sa)
 {

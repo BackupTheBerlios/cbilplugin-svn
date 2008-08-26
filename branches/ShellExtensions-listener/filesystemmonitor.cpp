@@ -1,5 +1,8 @@
 #include "filesystemmonitor.h"
 
+DEFINE_EVENT_TYPE(wxEVT_MONITOR_NOTIFY)
+
+
 class DirMonitorThread : public wxThread
 {
 public:
@@ -56,6 +59,12 @@ public:
     HANDLE m_handle;
 };
 
+
+BEGIN_EVENT_TABLE(wxFileSystemMonitor, wxEvtHandler)
+    EVT_MONITOR_NOTIFY(wxID_ANY, wxFileSystemMonitor::OnMonitorEvent)
+END_EVENT_TABLE()
+
+
 #ifdef __WXGTK__
 void wxFileSystemMonitor::MonitorCallback(GnomeVFSMonitorHandle *handle, const gchar *monitor_uri, const gchar *info_uri, GnomeVFSMonitorEventType event_type, gpointer user_data)
 {
@@ -76,6 +85,9 @@ void wxFileSystemMonitor::Callback(int EventType, const wxString &info_uri)
         this->AddPendingEvent(e); //TODO: ADD EVENT HANDLER
 }
 
+void wxFileSystemMonitor::OnMonitorEvent(wxFileSysMonitorEvent &e)
+{
+}
 
 wxFileSystemMonitor::wxFileSystemMonitor(wxEvtHandler *parent, const wxString &uri)
 {

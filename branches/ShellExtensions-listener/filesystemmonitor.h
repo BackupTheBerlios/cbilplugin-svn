@@ -152,6 +152,7 @@ public:
     wxFileSystemMonitor(wxEvtHandler *parent=NULL, const wxString &uri=wxEmptyString);
     virtual ~wxFileSystemMonitor();
     virtual void Callback(int EventType, const wxString &uri);
+    void OnMonitorEvent(wxFileSysMonitorEvent &e);
 protected:
 private:
     wxString m_uri;
@@ -161,6 +162,7 @@ private:
     GnomeVFSMonitorHandle *m_h;
 #else
 #endif
+    DECLARE_EVENT_TABLE()
 };
 
 #endif // WXFILESYSTEMMONITOR_H

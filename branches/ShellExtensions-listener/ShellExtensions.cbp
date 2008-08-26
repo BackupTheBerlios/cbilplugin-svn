@@ -386,6 +386,12 @@
 			<Option target="se-plugin" />
 			<Option target="se-plugin-binary" />
 		</Unit>
+		<Unit filename="filesystemmonitor.cpp">
+			<Option target="se-plugin" />
+		</Unit>
+		<Unit filename="filesystemmonitor.h">
+			<Option target="se-plugin" />
+		</Unit>
 		<Unit filename="manifest.xml">
 			<Option target="default" />
 			<Option target="cbtearaway" />

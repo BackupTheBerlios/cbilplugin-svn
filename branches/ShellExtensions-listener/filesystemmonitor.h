@@ -7,15 +7,19 @@
 	#include <wx/wx.h>
 #endif
 
-
+#ifdef __WXGTK__
 #include <libgnomevfs/gnome-vfs.h>
+#endif
+
 #include <map>
 
 class wxFileSystemMonitor;
 
+#ifdef __WXGTK__
 typedef std::map<GnomeVFSMonitorHandle *, wxFileSystemMonitor *> MonMap;
-
 static MonMap m;
+#endif
+
 
 /*
 WIN32
@@ -150,10 +154,10 @@ public:
     virtual void Callback(int EventType, const wxString &uri);
 protected:
 private:
-    static void MonitorCallback(GnomeVFSMonitorHandle *handle, const gchar *monitor_uri, const gchar *info_uri, GnomeVFSMonitorEventType event_type, gpointer user_data);
     wxString m_uri;
     wxEvtHandler *m_parent;
 #ifdef __WXGTK__
+    static void MonitorCallback(GnomeVFSMonitorHandle *handle, const gchar *monitor_uri, const gchar *info_uri, GnomeVFSMonitorEventType event_type, gpointer user_data);
     GnomeVFSMonitorHandle *m_h;
 #else
 #endif

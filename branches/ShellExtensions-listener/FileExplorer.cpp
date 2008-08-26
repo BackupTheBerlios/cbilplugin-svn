@@ -380,12 +380,12 @@ void FileExplorer::OnUpdateTreeItems(wxCommandEvent &e)
         m_updatetimer->Start(10,true);
     else
     {
-        //TODO: If the next node is not root, use a shorter delay
+        //TODO: Restart the timer if there are more open nodes
         m_updating_node=GetNextExpandedNode(m_updating_node);
         if(m_updating_node!=m_Tree->GetRootItem())
             m_updatetimer->Start(10,true);
-        else
-            m_updatetimer->Start(3000,true);
+//        else //TODO: Replace this with a directory monitor
+//            m_updatetimer->Start(3000,true);
     }
     m_updater->Delete();
     m_updater=NULL;

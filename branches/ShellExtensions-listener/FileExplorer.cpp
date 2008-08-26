@@ -83,7 +83,6 @@ int FileTreeCtrl::OnCompareItems(const wxTreeItemId& item1, const wxTreeItemId& 
     return (GetItemText(item1).CmpNoCase(GetItemText(item2)));
 }
 
-
 BEGIN_EVENT_TABLE(FileExplorer, wxPanel)
     EVT_TIMER(ID_UPDATETIMER, FileExplorer::OnTimerCheckUpdates)
     EVT_COMMAND(0, wxEVT_NOTIFY_UPDATE_TREE, FileExplorer::OnUpdateTreeItems)
@@ -305,14 +304,19 @@ void FileExplorer::Refresh(wxTreeItemId ti)
     m_updatetimer->Start(10,true);
 }
 
+void FileExplorer::UpdateAbort()
+{
+    if(!m_update_active)
+        return;
+    delete m_updater;
+    m_update_active=false;
+    m_updatetimer->Stop();
+}
+
 void FileExplorer::OnTimerCheckUpdates(wxTimerEvent &e)
 {
     if(m_update_active)
-    {
-        //restart the timer -- shouldn't need to as it will happen in OnUpdateTreeItems
-        //m_updatetimer->Start(3000,true);
         return;
-    }
     m_updater=new FileExplorerUpdater(this);
     m_updated_node=m_updating_node;
     m_update_active=true;

@@ -1,14 +1,9 @@
 #ifndef FILEEXPLORER_H
 #define FILEEXPLORER_H
 
-#include <wx/wxprec.h>
-
-#ifndef WX_PRECOMP
-	#include <wx/wx.h>
-    #include <wx/treectrl.h>
-    #include <wx/combobox.h>
-#endif
-
+#include <wx/wx.h>
+#include <wx/treectrl.h>
+#include <wx/combobox.h>
 #include <wx/dynarray.h>
 
 #include <sdk.h>
@@ -101,6 +96,7 @@ private:
     void OnUpdateTreeItems(wxCommandEvent &event);
     void OnTimerCheckUpdates(wxTimerEvent &event);
     void OnExecRequest(wxCommandEvent &event);
+    void UpdateAbort();
 
     void WriteConfig();
     void ReadConfig();

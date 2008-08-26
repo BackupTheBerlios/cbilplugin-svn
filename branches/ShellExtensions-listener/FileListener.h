@@ -1,17 +1,10 @@
 #ifndef FILEEXPLORERUPDATER_H_INCLUDED
 #define FILEEXPLORERUPDATER_H_INCLUDED
 
-#include <wx/wxprec.h>
-
-#ifndef WX_PRECOMP
-	#include <wx/wx.h>
-    #include <wx/treectrl.h>
-    #include <wx/thread.h>
-    #include <wx/process.h>
-#endif
-
+#include <wx/wx.h>
 #include <wx/treectrl.h>
 #include <wx/thread.h>
+#include <wx/process.h>
 
 
 #include <vector>
@@ -42,7 +35,7 @@ class FileExplorerUpdater: public wxThread, public wxEvtHandler
 public:
     FileExplorerUpdater(FileExplorer *fe) : wxThread(wxTHREAD_JOINABLE) { m_fe=fe;     m_exec_proc=NULL;
 return;}
-    ~FileExplorerUpdater() {if(IsRunning()) Delete();}
+    ~FileExplorerUpdater();
     FileDataVec m_adders;
     FileDataVec m_removers;
     void Update(const wxTreeItemId &ti); //call on main thread to do the background magic

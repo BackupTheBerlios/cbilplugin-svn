@@ -2,11 +2,8 @@
 #include "FileExplorer.h"
 #include "se_globals.h"
 
-
-
 DEFINE_EVENT_TYPE(wxEVT_NOTIFY_UPDATE_TREE)
 DEFINE_EVENT_TYPE(wxEVT_NOTIFY_EXEC_REQUEST)
-
 
 int ID_EXEC_TIMER=wxNewId();
 
@@ -14,6 +11,20 @@ BEGIN_EVENT_TABLE(FileExplorerUpdater, wxEvtHandler)
     EVT_TIMER(ID_EXEC_TIMER, FileExplorerUpdater::OnExecTimer)
     EVT_END_PROCESS(wxID_ANY, FileExplorerUpdater::OnExecTerminate)
 END_EVENT_TABLE()
+
+FileExplorerUpdater::~FileExplorerUpdater()
+{
+    if(m_exec_proc)
+    {
+        m_exec_timer->Stop();
+        delete m_exec_timer;
+        m_exec_proc->Detach();
+        m_exec_cond->Signal();
+        m_exec_mutex->Unlock();
+    }
+    if(IsRunning())
+        Delete();
+}
 
 
 void FileExplorerUpdater::Update(const wxTreeItemId &ti)
@@ -41,7 +52,6 @@ void *FileExplorerUpdater::Entry()
     return NULL;
 }
 
-
 // Call from main thread prior to thread entry point
 void FileExplorerUpdater::GetTreeState(const wxTreeItemId &ti)
 {
@@ -57,7 +67,6 @@ void FileExplorerUpdater::GetTreeState(const wxTreeItemId &ti)
         ch=m_fe->m_Tree->GetNextChild(ti,cookie);
     }
 }
-
 
 // called from Thread::Entry
 bool FileExplorerUpdater::GetCurrentState(const wxString &path)
@@ -146,7 +155,6 @@ bool FileExplorerUpdater::GetCurrentState(const wxString &path)
     return !TestDestroy();
 }
 
-
 bool FileExplorerUpdater::CalcChanges()
 {
     m_adders.clear();
@@ -177,7 +185,6 @@ bool FileExplorerUpdater::CalcChanges()
         m_adders.push_back(*it);
     return !TestDestroy();
 }
-
 
 int FileExplorerUpdater::Exec(const wxString &command, wxArrayString &output)
 {
@@ -250,7 +257,6 @@ void FileExplorerUpdater::ReadStream(bool all)
     }
 }
 
-
 bool FileExplorerUpdater::ParseSVNstate(const wxString &path, VCSstatearray &sa)
 {
     if(!wxFileName::DirExists(wxFileName(path,_T(".svn")).GetFullPath()))
@@ -309,7 +315,6 @@ bool FileExplorerUpdater::ParseSVNstate(const wxString &path, VCSstatearray &sa)
     }
     return true;
 }
-
 
 bool FileExplorerUpdater::ParseBZRstate(const wxString &path, VCSstatearray &sa)
 {
@@ -381,7 +386,6 @@ bool FileExplorerUpdater::ParseBZRstate(const wxString &path, VCSstatearray &sa)
     return true;
 }
 
-
 bool FileExplorerUpdater::ParseHGstate(const wxString &path, VCSstatearray &sa)
 {
     wxString parent=path;
@@ -437,7 +441,6 @@ bool FileExplorerUpdater::ParseHGstate(const wxString &path, VCSstatearray &sa)
     }
     return true;
 }
-
 
 bool FileExplorerUpdater::ParseCVSstate(const wxString &path, VCSstatearray &sa)
 {

@@ -7,6 +7,15 @@
 DEFINE_EVENT_TYPE(wxEVT_NOTIFY_UPDATE_TREE)
 DEFINE_EVENT_TYPE(wxEVT_NOTIFY_EXEC_REQUEST)
 
+
+int ID_EXEC_TIMER=wxNewId();
+
+BEGIN_EVENT_TABLE(FileExplorerUpdater, wxEvtHandler)
+    EVT_TIMER(ID_EXEC_TIMER, FileExplorerUpdater::OnExecTimer)
+    EVT_END_PROCESS(wxID_ANY, FileExplorerUpdater::OnExecTerminate)
+END_EVENT_TABLE()
+
+
 void FileExplorerUpdater::Update(const wxTreeItemId &ti)
 {
     m_path=wxString(m_fe->GetFullPath(ti).c_str());
@@ -185,38 +194,59 @@ int FileExplorerUpdater::Exec(const wxString &command, wxArrayString &output)
     delete m_exec_mutex;
     if(m_exec_proc_id==0)
         exitcode=1;
-    m_exec_proc->Detach(); //TODO: delete if we process its terminate event
-    m_exec_proc=NULL;
+    output=m_exec_output;
     return exitcode;
 }
 
 void FileExplorerUpdater::ExecMain()
 {
-    m_exec_proc=new wxProcess();
+    m_exec_output.Empty();
+    m_exec_proc=new wxProcess(this);
     m_exec_proc->Redirect();
     m_exec_mutex->Lock();
     m_exec_proc_id=wxExecute(m_exec_cmd,wxEXEC_ASYNC,m_exec_proc);
-    m_exec_cond->Signal();
-    m_exec_mutex->Unlock();
-    m_exec_timer->Start()
-}
-
-void FileExplorerUpdater::ReadStream()
-{
-    m_exec_stream=m_exec_proc->GetInputStream();
-    wxTextInputStream tis(*m_exec_stream);
-    int count=0;
-    while(m_exec_stream->Peek() && count<200) //TODO: CRASHES ON WIN32 - FIND FIX
+    if(m_exec_proc_id==0)
     {
-        output.Add(tis.ReadLine());
-        count++;
-    }
-    if(count>=200)
-    else
-    {
-        m_exec_mutex->Lock();
         m_exec_cond->Signal();
         m_exec_mutex->Unlock();
+        return;
+    }
+    m_exec_timer=new wxTimer(this,ID_EXEC_TIMER);
+    m_exec_timer->Start(100,true);
+}
+
+void FileExplorerUpdater::OnExecTerminate(wxProcessEvent &e)
+{
+    ReadStream(true);
+    m_exec_timer->Stop();
+    delete m_exec_timer;
+    delete m_exec_proc;
+    m_exec_proc=NULL;
+    m_exec_cond->Signal();
+    m_exec_mutex->Unlock();
+}
+
+void FileExplorerUpdater::OnExecTimer(wxTimerEvent &e)
+{
+    if(m_exec_proc)
+        ReadStream();
+}
+
+void FileExplorerUpdater::ReadStream(bool all)
+{
+    m_exec_timer->Stop();
+    m_exec_stream=m_exec_proc->GetInputStream();
+    wxTextInputStream tis(*m_exec_stream);
+    wxStopWatch sw;
+    while(m_exec_proc->IsInputAvailable())
+    {
+        m_exec_output.Add(tis.ReadLine());
+        if(!all && sw.Time()>30)
+            break;
+    }
+    if(!all)
+    {
+        m_exec_timer->Start(150,true);
     }
 }
 

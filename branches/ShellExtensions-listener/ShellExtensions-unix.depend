@@ -2311,11 +2311,12 @@
 	<wx/wx.h>
 	<wx/button.h>
 
-1219531403 /home/damien/src/cbilrepo/branches/ShellExtensions-listener/FileListener.h
+1219710705 /home/damien/src/cbilrepo/branches/ShellExtensions-listener/FileListener.h
 	<wx/wxprec.h>
 	<wx/wx.h>
 	<wx/treectrl.h>
 	<wx/thread.h>
+	<wx/process.h>
 	<wx/treectrl.h>
 	<wx/thread.h>
 	<vector>
@@ -2365,7 +2366,7 @@
 	"se_globals.h"
 	<wx/arrimpl.cpp>
 
-1219586640 source:/home/damien/src/cbilrepo/branches/ShellExtensions-listener/FileListener.cpp
+1219718957 source:/home/damien/src/cbilrepo/branches/ShellExtensions-listener/FileListener.cpp
 	"FileListener.h"
 	"FileExplorer.h"
 	"se_globals.h"
@@ -2373,7 +2374,7 @@
 1219590091 source:/home/damien/src/cbilrepo/branches/ShellExtensions-listener/filesystemmonitor.cpp
 	"filesystemmonitor.h"
 
-1219590118 /home/damien/src/cbilrepo/branches/ShellExtensions-listener/filesystemmonitor.h
+1219707206 /home/damien/src/cbilrepo/branches/ShellExtensions-listener/filesystemmonitor.h
 	<wx/wxprec.h>
 	<wx/wx.h>
 	<libgnomevfs/gnome-vfs.h>

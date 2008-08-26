@@ -7,6 +7,7 @@
 	#include <wx/wx.h>
     #include <wx/treectrl.h>
     #include <wx/thread.h>
+    #include <wx/process.h>
 #endif
 
 #include <wx/treectrl.h>
@@ -36,7 +37,7 @@ struct FileData
 
 typedef std::vector<FileData> FileDataVec;
 
-class FileExplorerUpdater: public wxThread
+class FileExplorerUpdater: public wxThread, public wxEvtHandler
 {
 public:
     FileExplorerUpdater(FileExplorer *fe) : wxThread(wxTHREAD_JOINABLE) { m_fe=fe;     m_exec_proc=NULL;
@@ -46,6 +47,8 @@ return;}
     FileDataVec m_removers;
     void Update(const wxTreeItemId &ti); //call on main thread to do the background magic
     void ExecMain();
+    void OnExecTerminate(wxProcessEvent &e);
+    void OnExecTimer(wxTimerEvent &e);
 private:
     FileExplorer *m_fe;
     FileDataVec m_treestate;
@@ -55,18 +58,22 @@ private:
     wxProcess *m_exec_proc;
     wxInputStream *m_exec_stream;
     int m_exec_proc_id;
+    wxTimer *m_exec_timer;
     wxString m_exec_cmd;
     wxString m_path;
     wxString m_wildcard;
+    wxArrayString m_exec_output;
     virtual ExitCode Entry();
     bool ParseBZRstate(const wxString &path, VCSstatearray &sa);
     bool ParseHGstate(const wxString &path, VCSstatearray &sa);
     bool ParseCVSstate(const wxString &path, VCSstatearray &sa);
     bool ParseSVNstate(const wxString &path, VCSstatearray &sa);
     int Exec(const wxString &command, wxArrayString &output);
+    void ReadStream(bool all=false);
     void GetTreeState(const wxTreeItemId &ti);
     bool GetCurrentState(const wxString &path);
     bool CalcChanges(); //creates the vector of adders and removers
+    DECLARE_EVENT_TABLE()
 };
 
 

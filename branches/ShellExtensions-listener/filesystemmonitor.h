@@ -9,68 +9,11 @@
 
 #ifdef __WXGTK__
 #include <libgnomevfs/gnome-vfs.h>
+#else //WINDOWS
+class DirMonitorThread;
 #endif
-
-#include <map>
 
 class wxFileSystemMonitor;
-
-#ifdef __WXGTK__
-typedef std::map<GnomeVFSMonitorHandle *, wxFileSystemMonitor *> MonMap;
-static MonMap m;
-#endif
-
-
-/*
-WIN32
-Before starting loop
-HANDLE WINAPI FindFirstChangeNotification(
-  __in  LPCTSTR lpPathName,
-  __in  BOOL bWatchSubtree,
-  __in  DWORD dwNotifyFilter
-);
-
-Enter loop, then wait
-DWORD WINAPI MsgWaitForMultipleObjects(
-  __in  DWORD nCount,
-  __in  const HANDLE *pHandles,
-  __in  BOOL bWaitAll,
-  __in  DWORD dwMilliseconds,
-  __in  DWORD dwWakeMask
-);
-
-Queue next wait
-BOOL WINAPI FindNextChangeNotification(
-  __in  HANDLE hChangeHandle
-);
-
-Clean up when done
-BOOL WINAPI FindCloseChangeNotification(
-  __in  HANDLE hChangeHandle
-);
-
-
-BOOL WINAPI ReadDirectoryChangesW(
-  __in         HANDLE hDirectory,
-  __out        LPVOID lpBuffer,
-  __in         DWORD nBufferLength,
-  __in         BOOL bWatchSubtree,
-  __in         DWORD dwNotifyFilter,
-  __out_opt    LPDWORD lpBytesReturned,
-  __inout_opt  LPOVERLAPPED lpOverlapped,
-  __in_opt     LPOVERLAPPED_COMPLETION_ROUTINE lpCompletionRoutine
-);
-
-lpBuffer contains:
-
-typedef struct _FILE_NOTIFY_INFORMATION {
-  DWORD NextEntryOffset;
-  DWORD Action;
-  DWORD FileNameLength;
-  WCHAR FileName[1];
-} FILE_NOTIFY_INFORMATION,
- *PFILE_NOTIFY_INFORMATION;
-*/
 
 ///////////////////////////////////////
 // EVENT CODE /////////////////////////
@@ -108,7 +51,6 @@ public:
     wxString m_info_uri;
 };
 
-
 typedef void (wxEvtHandler::*wxFileSysMonitorEventFunction)(wxFileSysMonitorEvent&);
 
 #define EVT_MONITOR_NOTIFY(id, fn) \
@@ -134,33 +76,57 @@ GNOME_VFS_MONITOR_EVENT_METADATA_CHANGED
 
 /*
 Win32
+Want to watch for all of these
 FILE_NOTIFY_CHANGE_FILE_NAME 0x00000001
 FILE_NOTIFY_CHANGE_DIR_NAME 0x00000002
 FILE_NOTIFY_CHANGE_ATTRIBUTES 0x00000004
 FILE_NOTIFY_CHANGE_SIZE 0x00000008
 FILE_NOTIFY_CHANGE_LAST_WRITE 0x00000010
-FILE_NOTIFY_CHANGE_LAST_ACCESS 0x00000020
 FILE_NOTIFY_CHANGE_CREATION 0x00000040
+
+But possibly exclude these
+FILE_NOTIFY_CHANGE_LAST_ACCESS 0x00000020
 FILE_NOTIFY_CHANGE_SECURITY 0x00000100
+
+These actions will be reported:
+FILE_ACTION_ADDED
+FILE_ACTION_REMOVED
+FILE_ACTION_MODIFIED
+FILE_ACTION_RENAMED_OLD_NAME
+FILE_ACTION_RENAMED_NEW_NAME
 */
 
-//void MonitorCallback(GnomeVFSMonitorHandle *handle, const gchar *monitor_uri, const gchar *info_uri, GnomeVFSMonitorEventType event_type, gpointer user_data);
+#define MONITOR_FILE_CHANGED 0x001
+#define MONITOR_FILE_DELETED 0x002
+#define MONITOR_FILE_CREATED 0x004
+#define MONITOR_FILE_ATTRIBUTES 0x080
+//TODO: Decide if it is worth having these
+#define MONITOR_FILE_STARTEXEC 0x010
+#define MONITOR_FILE_STOPEXEC 0x020
+
+#define DEFAULT_MONITOR_FILTER_WIN32 FILE_NOTIFY_CHANGE_FILE_NAME|FILE_NOTIFY_CHANGE_DIR_NAME|FILE_NOTIFY_CHANGE_ATTRIBUTES|FILE_NOTIFY_CHANGE_SIZE|FILE_NOTIFY_CHANGE_LAST_WRITE|FILE_NOTIFY_CHANGE_CREATION
+
+#define DEFAULT_MONITOR_FILTER MONITOR_FILE_CHANGED|MONITOR_FILE_DELETED|MONITOR_FILE_CREATED|MONITOR_FILE_ATTRIBUTES
+
 
 class wxFileSystemMonitor: public wxEvtHandler
 {
 public:
-    wxFileSystemMonitor(wxEvtHandler *parent=NULL, const wxString &uri=wxEmptyString);
+    wxFileSystemMonitor(wxEvtHandler *parent=NULL, const wxString &uri=wxEmptyString, int eventfilter=DEFAULT_MONITOR_FILTER);
     virtual ~wxFileSystemMonitor();
+    bool Start();
     virtual void Callback(int EventType, const wxString &uri);
     void OnMonitorEvent(wxFileSysMonitorEvent &e);
 protected:
 private:
     wxString m_uri;
     wxEvtHandler *m_parent;
+    int m_eventfilter;
 #ifdef __WXGTK__
     static void MonitorCallback(GnomeVFSMonitorHandle *handle, const gchar *monitor_uri, const gchar *info_uri, GnomeVFSMonitorEventType event_type, gpointer user_data);
     GnomeVFSMonitorHandle *m_h;
 #else
+    DirMonitorThread *m_monitorthread;
 #endif
     DECLARE_EVENT_TABLE()
 };

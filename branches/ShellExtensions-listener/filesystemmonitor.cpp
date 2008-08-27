@@ -22,14 +22,19 @@ public:
         return; }
     void *Entry()
     {
+        wxString outstr=_("Starting monitor on\n");
+        for(int i=0;i<m_pathnames.GetCount();i++)
+            outstr+=m_pathnames[i]+_("\n");
+        wxMessageBox(outstr);
+
         for(unsigned int i=0;i<m_pathnames.GetCount();i++)
             m_handles[i]=::FindFirstChangeNotification(m_pathnames[i].c_str(), m_subtree, DEFAULT_MONITOR_FILTER_WIN32);
+        PFILE_NOTIFY_INFORMATION changedata=(PFILE_NOTIFY_INFORMATION)(new char[4096]);
         while(!TestDestroy())
         {
-            DWORD result=::MsgWaitForMultipleObjects(1,m_handles,false,m_waittime,DEFAULT_MONITOR_FILTER_WIN32);
+            DWORD result=::MsgWaitForMultipleObjects(m_pathnames.GetCount(),m_handles,false,m_waittime,DEFAULT_MONITOR_FILTER_WIN32);
             if(!result==WAIT_TIMEOUT)
             {
-                PFILE_NOTIFY_INFORMATION changedata=(PFILE_NOTIFY_INFORMATION)(new char[4096]);
                 DWORD chda_len;
                 if(::ReadDirectoryChangesW(m_handles[result- WAIT_OBJECT_0], changedata, 4096, m_subtree, m_notifyfilter, &chda_len, NULL, NULL))
                 {
@@ -57,6 +62,7 @@ public:
                             if(action&m_notifyfilter)
                             {
                                 wxString filename(changedata->FileName,changedata->FileNameLength);
+                                wxMessageBox(_("changing ")+filename);
                                 changedata=(PFILE_NOTIFY_INFORMATION)((char*)changedata+changedata->NextEntryOffset);
                                 wxFileSysMonitorEvent e(m_pathnames[result- WAIT_OBJECT_0],action,filename);
                                 m_parent->AddPendingEvent(e);
@@ -70,15 +76,14 @@ public:
                         m_parent->AddPendingEvent(e);
                     }
                 }
-                delete changedata;
-            } else
-                break;
+            }
             for(unsigned int i=0;i<m_pathnames.GetCount();i++)
                 if(!FindNextChangeNotification(m_handles[i]))
                     break;
             if(m_singleshot)
                 break;
         }
+        delete changedata;
         for(unsigned int i=0;i<m_pathnames.GetCount();i++)
             FindCloseChangeNotification(m_handles[i]);
         wxFileSysMonitorEvent e(wxEmptyString,MONITOR_FINISHED,wxEmptyString);

@@ -85,6 +85,7 @@ int FileTreeCtrl::OnCompareItems(const wxTreeItemId& item1, const wxTreeItemId& 
 
 BEGIN_EVENT_TABLE(FileExplorer, wxPanel)
     EVT_TIMER(ID_UPDATETIMER, FileExplorer::OnTimerCheckUpdates)
+    EVT_MONITOR_NOTIFY(wxID_ANY, FileExplorer::OnDirMonitor)
     EVT_COMMAND(0, wxEVT_NOTIFY_UPDATE_TREE, FileExplorer::OnUpdateTreeItems)
     EVT_COMMAND(0, wxEVT_NOTIFY_EXEC_REQUEST, FileExplorer::OnExecRequest)
     EVT_TREE_BEGIN_DRAG(ID_FILETREE, FileExplorer::OnBeginDragTreeItem)
@@ -278,6 +279,21 @@ void FileExplorer::GetExpandedNodes(wxTreeItemId ti, Expansion *exp)
     }
 }
 
+void FileExplorer::GetExpandedPaths(wxTreeItemId ti,wxArrayString &paths)
+{
+    if(m_Tree->IsExpanded(ti))
+        paths.Add(GetFullPath(ti));
+    wxTreeItemIdValue cookie;
+    wxTreeItemId ch=m_Tree->GetFirstChild(ti,cookie);
+    while(ch.IsOk())
+    {
+        if(m_Tree->IsExpanded(ch))
+            GetExpandedPaths(ch,paths);
+        ch=m_Tree->GetNextChild(ti,cookie);
+    }
+}
+
+
 void FileExplorer::RecursiveRebuild(wxTreeItemId ti,Expansion *exp)
 {
     AddTreeItems(ti);
@@ -311,6 +327,27 @@ void FileExplorer::UpdateAbort()
     delete m_updater;
     m_update_active=false;
     m_updatetimer->Stop();
+}
+
+void FileExplorer::ResetDirMonitor()
+{
+    if(m_dir_monitor)
+        delete m_dir_monitor;
+    wxArrayString paths;
+    GetExpandedPaths(m_Tree->GetRootItem(),paths);
+//    wxString outstr=_("Starting monitor on\n");
+//    for(int i=0;i<paths.GetCount();i++)
+//        outstr+=paths[i]+_("\n");
+//    cbMessageBox(outstr);
+    m_dir_monitor=new wxFileSystemMonitor(this,paths);
+    m_dir_monitor->Start();
+}
+
+void FileExplorer::OnDirMonitor(wxFileSysMonitorEvent &e)
+{
+    cbMessageBox(wxString::Format(_T("%s,%i,%s"),e.m_mon_dir.c_str(),e.m_event_type,e.m_info_uri.c_str()));
+    m_updatetimer->Start(100,true);
+    m_updating_node=m_Tree->GetRootItem();
 }
 
 void FileExplorer::OnTimerCheckUpdates(wxTimerEvent &e)
@@ -384,6 +421,9 @@ void FileExplorer::OnUpdateTreeItems(wxCommandEvent &e)
         m_updating_node=GetNextExpandedNode(m_updating_node);
         if(m_updating_node!=m_Tree->GetRootItem())
             m_updatetimer->Start(10,true);
+        else
+            ResetDirMonitor();
+
 //        else //TODO: Replace this with a directory monitor
 //            m_updatetimer->Start(3000,true);
     }

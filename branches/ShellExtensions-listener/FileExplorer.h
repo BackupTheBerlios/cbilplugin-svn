@@ -10,6 +10,7 @@
 #include <vector>
 #include "FileExplorerSettings.h"
 #include "FileListener.h"
+#include "filesystemmonitor.h"
 
 class Expansion;
 
@@ -63,6 +64,7 @@ public:
     wxString GetRootFolder() {return m_root;}
     void FindFile(const wxString &file) {}
 private:
+    // User initiated events
     void OnRightClick(wxTreeEvent &event);
     void OnActivate(wxTreeEvent &event);
     void OnExpand(wxTreeEvent &event);
@@ -93,10 +95,14 @@ private:
     void OnEndDragTreeItem(wxTreeEvent &event);
     void OnAddToProject(wxCommandEvent &event);
 
+    // Events related to updating the Tree
+    void OnDirMonitor(wxFileSysMonitorEvent &e);
     void OnUpdateTreeItems(wxCommandEvent &event);
     void OnTimerCheckUpdates(wxTimerEvent &event);
     void OnExecRequest(wxCommandEvent &event);
+
     void UpdateAbort();
+    void ResetDirMonitor();
 
     void WriteConfig();
     void ReadConfig();
@@ -112,6 +118,7 @@ private:
     bool AddTreeItems(const wxTreeItemId &ti);
     wxString GetFullPath(const wxTreeItemId &ti);
     void GetExpandedNodes(wxTreeItemId ti, Expansion *exp);
+    void GetExpandedPaths(wxTreeItemId ti, wxArrayString &paths);
     wxTreeItemId GetNextExpandedNode(wxTreeItemId ti);
     void RecursiveRebuild(wxTreeItemId ti, Expansion *exp);
     void Refresh(wxTreeItemId ti);
@@ -132,6 +139,7 @@ private:
     wxTreeItemId m_updating_node;
     wxTreeItemId m_updated_node;
     bool m_update_active;
+    wxFileSystemMonitor *m_dir_monitor;
 
     int m_ticount; //number of selections
     wxString m_dragtest;

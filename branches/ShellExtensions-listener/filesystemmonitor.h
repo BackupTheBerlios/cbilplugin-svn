@@ -76,7 +76,7 @@ typedef void (wxEvtHandler::*wxFileSysMonitorEventFunction)(wxFileSysMonitorEven
 class wxFileSystemMonitor: public wxEvtHandler
 {
 public:
-    wxFileSystemMonitor(const wxArrayString &uri, int eventfilter=DEFAULT_MONITOR_FILTER, wxEvtHandler *parent=NULL);
+    wxFileSystemMonitor(wxEvtHandler *parent, const wxArrayString &uri, int eventfilter=DEFAULT_MONITOR_FILTER);
     virtual ~wxFileSystemMonitor();
     bool Start();
     void OnMonitorEvent(wxFileSysMonitorEvent &e);

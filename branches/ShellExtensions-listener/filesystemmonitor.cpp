@@ -155,7 +155,7 @@ void wxFileSystemMonitor::OnMonitorEvent(wxFileSysMonitorEvent &e)
         m_parent->AddPendingEvent(e);
 }
 
-wxFileSystemMonitor::wxFileSystemMonitor(const wxArrayString &uri, int eventfilter, wxEvtHandler *parent)
+wxFileSystemMonitor::wxFileSystemMonitor(wxEvtHandler *parent, const wxArrayString &uri, int eventfilter)
 {
     m_parent=parent;
     m_uri=uri;

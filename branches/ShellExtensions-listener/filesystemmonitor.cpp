@@ -22,27 +22,26 @@ public:
         return; }
     void *Entry()
     {
-        wxString outstr=_("Starting monitor on\n");
-        for(int i=0;i<m_pathnames.GetCount();i++)
-            outstr+=m_pathnames[i]+_("\n");
-        wxMessageBox(outstr);
-
         for(unsigned int i=0;i<m_pathnames.GetCount();i++)
             m_handles[i]=::FindFirstChangeNotification(m_pathnames[i].c_str(), m_subtree, DEFAULT_MONITOR_FILTER_WIN32);
         PFILE_NOTIFY_INFORMATION changedata=(PFILE_NOTIFY_INFORMATION)(new char[4096]);
         while(!TestDestroy())
         {
             DWORD result=::MsgWaitForMultipleObjects(m_pathnames.GetCount(),m_handles,false,m_waittime,DEFAULT_MONITOR_FILTER_WIN32);
-            if(!result==WAIT_TIMEOUT)
+            if(result!=WAIT_TIMEOUT)
             {
                 DWORD chda_len;
-                if(::ReadDirectoryChangesW(m_handles[result- WAIT_OBJECT_0], changedata, 4096, m_subtree, m_notifyfilter, &chda_len, NULL, NULL))
+                wxMessageBox(wxString::Format(_T("%i"),(int)(result- WAIT_OBJECT_0)));
+                if(false)//::ReadDirectoryChangesW(m_handles[result- WAIT_OBJECT_0], changedata, 4096, m_subtree, DEFAULT_MONITOR_FILTER_WIN32, &chda_len, NULL, NULL))
                 {
+                    wxMessageBox(_("read changes"));
                     if(chda_len>0)
                     {
+                        int off=0;
+                        PFILE_NOTIFY_INFORMATION chptr=changedata;
                         do
                         {
-                            DWORD a=changedata->Action;
+                            DWORD a=chptr->Action;
                             //TODO: Convert to the MONITOR_FILE_XXX action types, filtering those that aren't wanted
                             int action=0;
                             switch(a)
@@ -61,13 +60,14 @@ public:
                             }
                             if(action&m_notifyfilter)
                             {
-                                wxString filename(changedata->FileName,changedata->FileNameLength);
+                                wxString filename(chptr->FileName,chptr->FileNameLength);
                                 wxMessageBox(_("changing ")+filename);
-                                changedata=(PFILE_NOTIFY_INFORMATION)((char*)changedata+changedata->NextEntryOffset);
                                 wxFileSysMonitorEvent e(m_pathnames[result- WAIT_OBJECT_0],action,filename);
                                 m_parent->AddPendingEvent(e);
                             }
-                        } while(changedata->NextEntryOffset>0);
+                            off=chptr->NextEntryOffset;
+                            chptr=(PFILE_NOTIFY_INFORMATION)((char*)chptr+off);
+                        } while(off>0);
                     }
                     else
                     {
@@ -75,6 +75,12 @@ public:
                         wxFileSysMonitorEvent e(m_pathnames[result- WAIT_OBJECT_0],MONITOR_TOO_MANY_CHANGES,wxEmptyString);
                         m_parent->AddPendingEvent(e);
                     }
+                } else
+                {
+                    //couldn't read changes, tell parent to manually read the directory
+                    wxMessageBox(_("read changes failed"));
+                    wxFileSysMonitorEvent e(m_pathnames[result- WAIT_OBJECT_0],MONITOR_TOO_MANY_CHANGES,wxEmptyString);
+                    m_parent->AddPendingEvent(e);
                 }
             }
             for(unsigned int i=0;i<m_pathnames.GetCount();i++)

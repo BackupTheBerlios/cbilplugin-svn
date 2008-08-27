@@ -30,7 +30,7 @@ struct FileData
 
 typedef std::vector<FileData> FileDataVec;
 
-class FileExplorerUpdater: public wxThread, public wxEvtHandler
+class FileExplorerUpdater: public wxEvtHandler, public wxThread
 {
 public:
     FileExplorerUpdater(FileExplorer *fe) : wxThread(wxTHREAD_JOINABLE) { m_fe=fe;     m_exec_proc=NULL;

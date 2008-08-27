@@ -38,23 +38,14 @@ caller of change events
 
 BEGIN_DECLARE_EVENT_TYPES()
 DECLARE_LOCAL_EVENT_TYPE(wxEVT_MONITOR_NOTIFY, -1)
+DECLARE_LOCAL_EVENT_TYPE(wxEVT_MONITOR_NOTIFY2, -1)
 END_DECLARE_EVENT_TYPES()
 
-class wxFileSysMonitorEvent: public wxEvent
+class wxFileSysMonitorEvent: public wxNotifyEvent
 {
 public:
-    wxFileSysMonitorEvent(const wxString &mon_dir, int event_type, const wxString &uri)
-    {
-        m_mon_dir=mon_dir;
-        m_event_type=event_type;
-        m_info_uri=wxString(uri.c_str());
-    }
-    wxFileSysMonitorEvent(const wxFileSysMonitorEvent& c) : wxEvent(c)
-    {
-        m_mon_dir=wxString(c.m_mon_dir.c_str());
-        m_event_type=c.m_event_type;
-        m_info_uri=wxString(c.m_info_uri.c_str());
-    }
+    wxFileSysMonitorEvent(const wxString &mon_dir, int event_type, const wxString &uri);
+    wxFileSysMonitorEvent(const wxFileSysMonitorEvent& c);
     wxEvent *Clone() const { return new wxFileSysMonitorEvent(*this); }
     ~wxFileSysMonitorEvent() {}
     wxString m_mon_dir;
@@ -66,7 +57,7 @@ typedef void (wxEvtHandler::*wxFileSysMonitorEventFunction)(wxFileSysMonitorEven
 
 #define EVT_MONITOR_NOTIFY(id, fn) \
     DECLARE_EVENT_TABLE_ENTRY( wxEVT_MONITOR_NOTIFY, id, -1, \
-    (wxObjectEventFunction) (wxEventFunction) \
+    (wxObjectEventFunction) (wxEventFunction) (wxCommandEventFunction) (wxNotifyEventFunction) \
     wxStaticCastEvent( wxFileSysMonitorEventFunction, & fn ), (wxObject *) NULL ),
 
 ///////////////////////////////////////
@@ -80,6 +71,7 @@ public:
     virtual ~wxFileSystemMonitor();
     bool Start();
     void OnMonitorEvent(wxFileSysMonitorEvent &e);
+    void OnMonitorEvent2(wxCommandEvent &e);
 private:
     wxArrayString m_uri;
     wxEvtHandler *m_parent;

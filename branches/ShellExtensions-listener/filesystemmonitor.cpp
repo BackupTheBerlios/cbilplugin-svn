@@ -1,6 +1,21 @@
 #include "filesystemmonitor.h"
 
 DEFINE_EVENT_TYPE(wxEVT_MONITOR_NOTIFY)
+DEFINE_EVENT_TYPE(wxEVT_MONITOR_NOTIFY2)
+
+wxFileSysMonitorEvent::wxFileSysMonitorEvent(const wxString &mon_dir, int event_type, const wxString &uri): wxNotifyEvent(wxEVT_MONITOR_NOTIFY)
+{
+    m_mon_dir=mon_dir;
+    m_event_type=event_type;
+    m_info_uri=wxString(uri.c_str());
+}
+wxFileSysMonitorEvent::wxFileSysMonitorEvent(const wxFileSysMonitorEvent& c) : wxNotifyEvent(c)
+{
+    m_mon_dir=wxString(c.m_mon_dir.c_str());
+    m_event_type=c.m_event_type;
+    m_info_uri=wxString(c.m_info_uri.c_str());
+}
+
 
 #ifdef __WXGTK__
 
@@ -31,10 +46,8 @@ public:
             if(result!=WAIT_TIMEOUT)
             {
                 DWORD chda_len;
-                wxMessageBox(wxString::Format(_T("%i"),(int)(result- WAIT_OBJECT_0)));
                 if(false)//::ReadDirectoryChangesW(m_handles[result- WAIT_OBJECT_0], changedata, 4096, m_subtree, DEFAULT_MONITOR_FILTER_WIN32, &chda_len, NULL, NULL))
                 {
-                    wxMessageBox(_("read changes"));
                     if(chda_len>0)
                     {
                         int off=0;
@@ -78,7 +91,7 @@ public:
                 } else
                 {
                     //couldn't read changes, tell parent to manually read the directory
-                    wxMessageBox(_("read changes failed"));
+                    //wxCommandEvent e(wxEVT_NOTIFY_UPDATE_TREE);
                     wxFileSysMonitorEvent e(m_pathnames[result- WAIT_OBJECT_0],MONITOR_TOO_MANY_CHANGES,wxEmptyString);
                     m_parent->AddPendingEvent(e);
                 }
@@ -92,8 +105,8 @@ public:
         delete changedata;
         for(unsigned int i=0;i<m_pathnames.GetCount();i++)
             FindCloseChangeNotification(m_handles[i]);
-        wxFileSysMonitorEvent e(wxEmptyString,MONITOR_FINISHED,wxEmptyString);
-        m_parent->AddPendingEvent(e);
+//        wxFileSysMonitorEvent e(wxEmptyString,MONITOR_FINISHED,wxEmptyString);
+//        m_parent->AddPendingEvent(e);
         return NULL;
     }
     ~DirMonitorThread()
@@ -114,7 +127,8 @@ public:
 #endif
 
 BEGIN_EVENT_TABLE(wxFileSystemMonitor, wxEvtHandler)
-    EVT_MONITOR_NOTIFY(wxID_ANY, wxFileSystemMonitor::OnMonitorEvent)
+    EVT_MONITOR_NOTIFY(0, wxFileSystemMonitor::OnMonitorEvent)
+//    EVT_COMMAND(0, wxEVT_MONITOR_NOTIFY2, FileExplorer::OnMonitorEvent2)
 END_EVENT_TABLE()
 
 #ifdef __WXGTK__
@@ -165,6 +179,7 @@ void wxFileSystemMonitor::OnMonitorEvent(wxFileSysMonitorEvent &e)
     if(m_parent)
         m_parent->AddPendingEvent(e);
 }
+
 
 wxFileSystemMonitor::wxFileSystemMonitor(wxEvtHandler *parent, const wxArrayString &uri, int eventfilter)
 {

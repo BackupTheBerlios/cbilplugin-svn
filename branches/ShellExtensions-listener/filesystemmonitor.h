@@ -1,11 +1,19 @@
 #ifndef WXFILESYSTEMMONITOR_H
 #define WXFILESYSTEMMONITOR_H
 
-#include <wx/wxprec.h>
+#include <wx/wx.h>
 
-#ifndef WX_PRECOMP
-	#include <wx/wx.h>
-#endif
+#define MONITOR_FINISHED 0x010000
+#define MONITOR_TOO_MANY_CHANGES 0x020000
+#define MONITOR_FILE_CHANGED 0x001
+#define MONITOR_FILE_DELETED 0x002
+#define MONITOR_FILE_CREATED 0x004
+//TODO: Decide if it is worth having these
+#define MONITOR_FILE_ATTRIBUTES 0x080
+#define MONITOR_FILE_STARTEXEC 0x010
+#define MONITOR_FILE_STOPEXEC 0x020
+
+#define DEFAULT_MONITOR_FILTER MONITOR_FILE_CHANGED|MONITOR_FILE_DELETED|MONITOR_FILE_CREATED|MONITOR_FILE_ATTRIBUTES
 
 #ifdef __WXGTK__
 #include <libgnomevfs/gnome-vfs.h>
@@ -20,9 +28,12 @@ class wxFileSystemMonitor;
 ///////////////////////////////////////
 
 /*
-Defines a wxFileSysMonitorEvent with public members pointing to the wxFileSystenerMonitor
+Defines a wxFileSysMonitorEvent with public member naming the path
+monitored, the file or directory creating the event and the code for
+the event. Also used to send Termination events (on win32)
 
-Also defines event table macro EVT_MONITOR_NOTIFY to notify the caller of change events
+Also defines event table macro EVT_MONITOR_NOTIFY to notify the
+caller of change events
 */
 
 BEGIN_DECLARE_EVENT_TYPES()
@@ -32,21 +43,21 @@ END_DECLARE_EVENT_TYPES()
 class wxFileSysMonitorEvent: public wxEvent
 {
 public:
-    wxFileSysMonitorEvent(wxFileSystemMonitor *fsm, int event_type, const wxString &uri)
+    wxFileSysMonitorEvent(const wxString &mon_dir, int event_type, const wxString &uri)
     {
-        m_fsm=fsm;
+        m_mon_dir=mon_dir;
         m_event_type=event_type;
         m_info_uri=wxString(uri.c_str());
     }
     wxFileSysMonitorEvent(const wxFileSysMonitorEvent& c) : wxEvent(c)
     {
-        m_fsm=c.m_fsm;
+        m_mon_dir=wxString(c.m_mon_dir.c_str());
         m_event_type=c.m_event_type;
         m_info_uri=wxString(c.m_info_uri.c_str());
     }
     wxEvent *Clone() const { return new wxFileSysMonitorEvent(*this); }
     ~wxFileSysMonitorEvent() {}
-    wxFileSystemMonitor *m_fsm;
+    wxString m_mon_dir;
     int m_event_type;
     wxString m_info_uri;
 };
@@ -58,54 +69,9 @@ typedef void (wxEvtHandler::*wxFileSysMonitorEventFunction)(wxFileSysMonitorEven
     (wxObjectEventFunction) (wxEventFunction) \
     wxStaticCastEvent( wxFileSysMonitorEventFunction, & fn ), (wxObject *) NULL ),
 
-/*
-LISTENER_TYPE_FILE      //GNOME_VFS_MONITOR_FILE
-LISTENER_TYPE_DIRECTORY //GNOME_VFS_MONITOR_DIRECTORY
-*/
-
-/*
-Gnome enum for monitor change events
-GNOME_VFS_MONITOR_EVENT_CHANGED,
-GNOME_VFS_MONITOR_EVENT_DELETED,
-GNOME_VFS_MONITOR_EVENT_STARTEXECUTING,
-GNOME_VFS_MONITOR_EVENT_STOPEXECUTING,
-GNOME_VFS_MONITOR_EVENT_CREATED,
-GNOME_VFS_MONITOR_EVENT_METADATA_CHANGED
-*/
-
-/*
-Win32
-Want to watch for all of these
-FILE_NOTIFY_CHANGE_FILE_NAME 0x00000001
-FILE_NOTIFY_CHANGE_DIR_NAME 0x00000002
-FILE_NOTIFY_CHANGE_ATTRIBUTES 0x00000004
-FILE_NOTIFY_CHANGE_SIZE 0x00000008
-FILE_NOTIFY_CHANGE_LAST_WRITE 0x00000010
-FILE_NOTIFY_CHANGE_CREATION 0x00000040
-
-But possibly exclude these
-FILE_NOTIFY_CHANGE_LAST_ACCESS 0x00000020
-FILE_NOTIFY_CHANGE_SECURITY 0x00000100
-
-These actions will be reported:
-FILE_ACTION_ADDED
-FILE_ACTION_REMOVED
-FILE_ACTION_MODIFIED
-FILE_ACTION_RENAMED_OLD_NAME
-FILE_ACTION_RENAMED_NEW_NAME
-*/
-
-#define MONITOR_FILE_CHANGED 0x001
-#define MONITOR_FILE_DELETED 0x002
-#define MONITOR_FILE_CREATED 0x004
-//TODO: Decide if it is worth having these
-#define MONITOR_FILE_ATTRIBUTES 0x080
-#define MONITOR_FILE_STARTEXEC 0x010
-#define MONITOR_FILE_STOPEXEC 0x020
-
-#define DEFAULT_MONITOR_FILTER_WIN32 FILE_NOTIFY_CHANGE_FILE_NAME|FILE_NOTIFY_CHANGE_DIR_NAME|FILE_NOTIFY_CHANGE_ATTRIBUTES|FILE_NOTIFY_CHANGE_SIZE|FILE_NOTIFY_CHANGE_LAST_WRITE|FILE_NOTIFY_CHANGE_CREATION
-
-#define DEFAULT_MONITOR_FILTER MONITOR_FILE_CHANGED|MONITOR_FILE_DELETED|MONITOR_FILE_CREATED|MONITOR_FILE_ATTRIBUTES
+///////////////////////////////////////
+// DIRECTORY MONITOR CLASS ////////////
+///////////////////////////////////////
 
 class wxFileSystemMonitor: public wxEvtHandler
 {
@@ -113,7 +79,7 @@ public:
     wxFileSystemMonitor(const wxArrayString &uri, int eventfilter=DEFAULT_MONITOR_FILTER, wxEvtHandler *parent=NULL);
     virtual ~wxFileSystemMonitor();
     bool Start();
-    virtual void Callback(int EventType, const wxString &uri);
+    virtual void Callback(const wxString &mon_dir, int EventType, const wxString &uri);
     void OnMonitorEvent(wxFileSysMonitorEvent &e);
 private:
     wxArrayString m_uri;
@@ -122,7 +88,7 @@ private:
 #ifdef __WXGTK__
     static void MonitorCallback(GnomeVFSMonitorHandle *handle, const gchar *monitor_uri, const gchar *info_uri, GnomeVFSMonitorEventType event_type, gpointer user_data);
     GnomeVFSMonitorHandle *m_h;
-#else
+#else //WINDOWS
     DirMonitorThread *m_monitorthread;
 #endif
     DECLARE_EVENT_TABLE()

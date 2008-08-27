@@ -10,6 +10,9 @@ static MonMap m;
 
 #else //WINDOWS
 
+#define DEFAULT_MONITOR_FILTER_WIN32 FILE_NOTIFY_CHANGE_FILE_NAME|FILE_NOTIFY_CHANGE_DIR_NAME|FILE_NOTIFY_CHANGE_ATTRIBUTES|FILE_NOTIFY_CHANGE_SIZE|FILE_NOTIFY_CHANGE_LAST_WRITE|FILE_NOTIFY_CHANGE_CREATION
+
+//WIN32 ONLY THREADED CLASS TO HANDLE WAITING ON DIR CHANGES ASYNCHRONOUSLY
 class DirMonitorThread : public wxThread
 {
 public:
@@ -19,16 +22,16 @@ public:
         return; }
     void *Entry()
     {
-        for(int i=0;i<m_pathnames.GetCount();i++)
+        for(unsigned int i=0;i<m_pathnames.GetCount();i++)
             m_handles[i]=::FindFirstChangeNotification(m_pathnames[i].c_str(), m_subtree, DEFAULT_MONITOR_FILTER_WIN32);
         while(!TestDestroy())
         {
-            DWORD result=::MsgWaitForMultipleObjects(1,&m_handles,false,m_waittime,DEFAULT_MONITOR_FILTER_WIN32);
+            DWORD result=::MsgWaitForMultipleObjects(1,m_handles,false,m_waittime,DEFAULT_MONITOR_FILTER_WIN32);
             if(!result==WAIT_TIMEOUT)
             {
                 PFILE_NOTIFY_INFORMATION changedata=(PFILE_NOTIFY_INFORMATION)(new char[4096]);
                 DWORD chda_len;
-                if(::ReadDirectoryChangesW(m_handles[TODO: result- XXX], changedata, 4096, m_subtree, m_notifyfilter, &chda_len, NULL, NULL))
+                if(::ReadDirectoryChangesW(m_handles[result- WAIT_OBJECT_0], changedata, 4096, m_subtree, m_notifyfilter, &chda_len, NULL, NULL))
                 {
                     if(chda_len>0)
                     {
@@ -53,28 +56,30 @@ public:
                             }
                             wxString filename(changedata->FileName,changedata->FileNameLength);
                             changedata=(PFILE_NOTIFY_INFORMATION)((char*)changedata+changedata->NextEntryOffset);
-                            wxFileSysMonitorEvent e(NULL,action,filename);
+                            wxFileSysMonitorEvent e(m_pathnames[result- WAIT_OBJECT_0],action,filename);
                             m_parent->AddPendingEvent(e);
                         } while(changedata->NextEntryOffset>0);
                     }
                     else
                     {
                         //too many changes, tell parent to manually read the directory
-                        wxFileSysMonitorEvent e(NULL,0,wxEmptyString);
+                        wxFileSysMonitorEvent e(m_pathnames[result- WAIT_OBJECT_0],MONITOR_TOO_MANY_CHANGES,wxEmptyString);
                         m_parent->AddPendingEvent(e);
                     }
                 }
                 delete changedata;
             } else
                 break;
-            for(int i=0;i<m_pathnames.GetCount();i++)
+            for(unsigned int i=0;i<m_pathnames.GetCount();i++)
                 if(!FindNextChangeNotification(m_handles[i]))
                     break;
             if(m_singleshot)
                 break;
-
         }
-        FindCloseChangeNotification(m_handle);
+        for(unsigned int i=0;i<m_pathnames.GetCount();i++)
+            FindCloseChangeNotification(m_handles[i]);
+        wxFileSysMonitorEvent e(wxEmptyString,MONITOR_FINISHED,wxEmptyString);
+        m_parent->AddPendingEvent(e);
         return NULL;
     }
     ~DirMonitorThread()
@@ -102,29 +107,26 @@ END_EVENT_TABLE()
 void wxFileSystemMonitor::MonitorCallback(GnomeVFSMonitorHandle *handle, const gchar *monitor_uri, const gchar *info_uri, GnomeVFSMonitorEventType event_type, gpointer user_data)
 {
     if(m.find(handle)!=m.end())
-        m[handle]->Callback(event_type, wxString::FromUTF8(info_uri));
+        m[handle]->Callback((wxString*)user_data, event_type, wxString::FromUTF8(info_uri));
     //TODO: ELSE WARNING/ERROR
 }
 #endif
 
-void wxFileSystemMonitor::Callback(int EventType, const wxString &info_uri)
+void wxFileSystemMonitor::Callback(const wxString &mon_dir,  int EventType, const wxString &info_uri)
 {
     //TODO: DETERMINE WHETHER THIS CALLBACK HAPPENS ON A THREAD?
     //TODO: Convert to gnomevfs events to the MONITOR_FILE_XXX action types, filtering those that aren't wanted
-    wxFileSysMonitorEvent e(this,EventType,info_uri);
+    wxFileSysMonitorEvent e(mon_dir,EventType,info_uri);
     this->AddPendingEvent(e);
 }
 
 void wxFileSystemMonitor::OnMonitorEvent(wxFileSysMonitorEvent &e)
 {
     if(m_parent)
-    {
-        e.m_fsm=this;
         m_parent->AddPendingEvent(e);
-    }
 }
 
-wxFileSystemMonitor::wxFileSystemMonitor(const wxArrayString &uri, int eventfilter=DEFAULT_MONITOR_FILTER, wxEvtHandler *parent=NULL)
+wxFileSystemMonitor::wxFileSystemMonitor(const wxArrayString &uri, int eventfilter, wxEvtHandler *parent)
 {
     m_parent=parent;
     m_uri=uri;
@@ -134,9 +136,9 @@ wxFileSystemMonitor::wxFileSystemMonitor(const wxArrayString &uri, int eventfilt
 bool wxFileSystemMonitor::Start()
 {
 #ifdef __WXGTK__
-    for(int i=0;i<m_uri.GetCount();i++)
+    for(unsigned int i=0;i<m_uri.GetCount();i++)
     {
-        gnome_vfs_monitor_add(&m_h, m_uri.ToUTF8(), GNOME_VFS_MONITOR_DIRECTORY, &wxFileSystemMonitor::MonitorCallback, &m_uri[i]);
+        gnome_vfs_monitor_add(&m_h[i], m_uri[i].ToUTF8(), GNOME_VFS_MONITOR_DIRECTORY, &wxFileSystemMonitor::MonitorCallback, &m_uri[i]);
         m_h.push_back(h);
         m[h]=this;
     }
@@ -151,7 +153,7 @@ bool wxFileSystemMonitor::Start()
 wxFileSystemMonitor::~wxFileSystemMonitor()
 {
 #ifdef __WXGTK__
-    for(int i=0;i<m_uri.GetCount();i++)
+    for(unsigned int i=0;i<m_uri.GetCount();i++)
     {
         gnome_vfs_monitor_cancel(m_h[i]);
         m.erase(m_h[i]);
@@ -159,5 +161,4 @@ wxFileSystemMonitor::~wxFileSystemMonitor()
 #else
     delete m_monitorthread;
 #endif
-    //dtor
 }

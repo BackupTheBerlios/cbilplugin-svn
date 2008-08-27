@@ -79,13 +79,13 @@ public:
     wxFileSystemMonitor(const wxArrayString &uri, int eventfilter=DEFAULT_MONITOR_FILTER, wxEvtHandler *parent=NULL);
     virtual ~wxFileSystemMonitor();
     bool Start();
-    virtual void Callback(const wxString &mon_dir, int EventType, const wxString &uri);
     void OnMonitorEvent(wxFileSysMonitorEvent &e);
 private:
     wxArrayString m_uri;
     wxEvtHandler *m_parent;
     int m_eventfilter;
 #ifdef __WXGTK__
+    void Callback(const wxString &mon_dir, int EventType, const wxString &uri);
     static void MonitorCallback(GnomeVFSMonitorHandle *handle, const gchar *monitor_uri, const gchar *info_uri, GnomeVFSMonitorEventType event_type, gpointer user_data);
     GnomeVFSMonitorHandle *m_h;
 #else //WINDOWS

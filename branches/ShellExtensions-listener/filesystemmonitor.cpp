@@ -54,10 +54,13 @@ public:
                                     action=MONITOR_FILE_CHANGED;
                                     break;
                             }
-                            wxString filename(changedata->FileName,changedata->FileNameLength);
-                            changedata=(PFILE_NOTIFY_INFORMATION)((char*)changedata+changedata->NextEntryOffset);
-                            wxFileSysMonitorEvent e(m_pathnames[result- WAIT_OBJECT_0],action,filename);
-                            m_parent->AddPendingEvent(e);
+                            if(action&m_notifyfilter)
+                            {
+                                wxString filename(changedata->FileName,changedata->FileNameLength);
+                                changedata=(PFILE_NOTIFY_INFORMATION)((char*)changedata+changedata->NextEntryOffset);
+                                wxFileSysMonitorEvent e(m_pathnames[result- WAIT_OBJECT_0],action,filename);
+                                m_parent->AddPendingEvent(e);
+                            }
                         } while(changedata->NextEntryOffset>0);
                     }
                     else
@@ -110,15 +113,41 @@ void wxFileSystemMonitor::MonitorCallback(GnomeVFSMonitorHandle *handle, const g
         m[handle]->Callback((wxString*)user_data, event_type, wxString::FromUTF8(info_uri));
     //TODO: ELSE WARNING/ERROR
 }
-#endif
 
 void wxFileSystemMonitor::Callback(const wxString &mon_dir,  int EventType, const wxString &info_uri)
 {
     //TODO: DETERMINE WHETHER THIS CALLBACK HAPPENS ON A THREAD?
     //TODO: Convert to gnomevfs events to the MONITOR_FILE_XXX action types, filtering those that aren't wanted
-    wxFileSysMonitorEvent e(mon_dir,EventType,info_uri);
-    this->AddPendingEvent(e);
+    int action=0;
+    switch(EventType)
+    {
+        case GNOME_VFS_MONITOR_EVENT_CHANGED:
+            action=MONITOR_FILE_CHANGED;
+            break;
+        case GNOME_VFS_MONITOR_EVENT_DELETED:
+            action=MONITOR_FILE_DELETED;
+            break;
+        case GNOME_VFS_MONITOR_EVENT_STARTEXECUTING:
+            action=MONITOR_FILE_STARTEXEC;
+            break;
+        case GNOME_VFS_MONITOR_EVENT_STOPEXECUTING:
+            action=MONITOR_FILE_STOPEXEC;
+            break;
+        case GNOME_VFS_MONITOR_EVENT_CREATED:
+            action=MONITOR_FILE_CREATED;
+            break;
+        case GNOME_VFS_MONITOR_EVENT_METADATA_CHANGED:
+            action=MONITOR_FILE_ATTRIBUTES;
+            break;
+    }
+    if(action&m_eventfilter)
+    {
+        wxFileSysMonitorEvent e(mon_dir,action,info_uri);
+        this->AddPendingEvent(e);
+    }
 }
+#endif
+
 
 void wxFileSystemMonitor::OnMonitorEvent(wxFileSysMonitorEvent &e)
 {

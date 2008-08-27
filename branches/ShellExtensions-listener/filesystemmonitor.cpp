@@ -13,21 +13,22 @@ static MonMap m;
 class DirMonitorThread : public wxThread
 {
 public:
-    DirMonitorThread(wxEvtHandler *parent, wxString pathname, bool singleshot, bool subtree, DWORD notifyfilter, DWORD waittime_ms)
+    DirMonitorThread(wxEvtHandler *parent, wxArrayString pathnames, bool singleshot, bool subtree, DWORD notifyfilter, DWORD waittime_ms)
         : wxThread(wxTHREAD_JOINABLE)
-    { m_parent=parent; m_waittime=waittime_ms; m_subtree=subtree; m_singleshot=singleshot; m_pathname=pathname.c_str(); m_notifyfilter=notifyfilter;
+    { m_parent=parent; m_waittime=waittime_ms; m_subtree=subtree; m_singleshot=singleshot; m_pathnames=pathnames; m_notifyfilter=notifyfilter; m_handles=new HANDLE[m_pathnames.GetCount()];
         return; }
     void *Entry()
     {
-        m_handle=::FindFirstChangeNotification(m_pathname.c_str(), m_subtree, DEFAULT_MONITOR_FILTER_WIN32);
+        for(int i=0;i<m_pathnames.GetCount();i++)
+            m_handles[i]=::FindFirstChangeNotification(m_pathnames[i].c_str(), m_subtree, DEFAULT_MONITOR_FILTER_WIN32);
         while(!TestDestroy())
         {
-            DWORD result=::MsgWaitForMultipleObjects(1,&m_handle,false,m_waittime,DEFAULT_MONITOR_FILTER_WIN32);
+            DWORD result=::MsgWaitForMultipleObjects(1,&m_handles,false,m_waittime,DEFAULT_MONITOR_FILTER_WIN32);
             if(!result==WAIT_TIMEOUT)
             {
                 PFILE_NOTIFY_INFORMATION changedata=(PFILE_NOTIFY_INFORMATION)(new char[4096]);
                 DWORD chda_len;
-                if(::ReadDirectoryChangesW(m_handle, changedata, 4096, m_subtree, m_notifyfilter, &chda_len, NULL, NULL))
+                if(::ReadDirectoryChangesW(m_handles[TODO: result- XXX], changedata, 4096, m_subtree, m_notifyfilter, &chda_len, NULL, NULL))
                 {
                     if(chda_len>0)
                     {
@@ -35,9 +36,24 @@ public:
                         {
                             DWORD a=changedata->Action;
                             //TODO: Convert to the MONITOR_FILE_XXX action types, filtering those that aren't wanted
+                            int action=0;
+                            switch(a)
+                            {
+                                case FILE_ACTION_ADDED:
+                                case FILE_ACTION_RENAMED_NEW_NAME:
+                                    action=MONITOR_FILE_CREATED;
+                                    break;
+                                case FILE_ACTION_REMOVED:
+                                case FILE_ACTION_RENAMED_OLD_NAME:
+                                    action=MONITOR_FILE_DELETED;
+                                    break;
+                                case FILE_ACTION_MODIFIED:
+                                    action=MONITOR_FILE_CHANGED;
+                                    break;
+                            }
                             wxString filename(changedata->FileName,changedata->FileNameLength);
                             changedata=(PFILE_NOTIFY_INFORMATION)((char*)changedata+changedata->NextEntryOffset);
-                            wxFileSysMonitorEvent e(NULL,a,filename);
+                            wxFileSysMonitorEvent e(NULL,action,filename);
                             m_parent->AddPendingEvent(e);
                         } while(changedata->NextEntryOffset>0);
                     }
@@ -51,8 +67,9 @@ public:
                 delete changedata;
             } else
                 break;
-            if(!FindNextChangeNotification(m_handle))
-                break;
+            for(int i=0;i<m_pathnames.GetCount();i++)
+                if(!FindNextChangeNotification(m_handles[i]))
+                    break;
             if(m_singleshot)
                 break;
 
@@ -64,24 +81,22 @@ public:
     {
         if(IsRunning())
             Delete();
+        delete [] m_handles;
     }
     DWORD m_waittime;
     bool m_subtree;
     bool m_singleshot;
-    wxString m_pathname;
+    wxArrayString m_pathnames;
     DWORD m_notifyfilter;
-    HANDLE m_handle;
+    HANDLE *m_handles;
     wxEvtHandler *m_parent;
 };
 
 #endif
 
-
-
 BEGIN_EVENT_TABLE(wxFileSystemMonitor, wxEvtHandler)
     EVT_MONITOR_NOTIFY(wxID_ANY, wxFileSystemMonitor::OnMonitorEvent)
 END_EVENT_TABLE()
-
 
 #ifdef __WXGTK__
 void wxFileSystemMonitor::MonitorCallback(GnomeVFSMonitorHandle *handle, const gchar *monitor_uri, const gchar *info_uri, GnomeVFSMonitorEventType event_type, gpointer user_data)
@@ -103,10 +118,13 @@ void wxFileSystemMonitor::Callback(int EventType, const wxString &info_uri)
 void wxFileSystemMonitor::OnMonitorEvent(wxFileSysMonitorEvent &e)
 {
     if(m_parent)
+    {
+        e.m_fsm=this;
         m_parent->AddPendingEvent(e);
+    }
 }
 
-wxFileSystemMonitor::wxFileSystemMonitor(wxEvtHandler *parent, const wxString &uri, int eventfilter)
+wxFileSystemMonitor::wxFileSystemMonitor(const wxArrayString &uri, int eventfilter=DEFAULT_MONITOR_FILTER, wxEvtHandler *parent=NULL)
 {
     m_parent=parent;
     m_uri=uri;
@@ -116,8 +134,12 @@ wxFileSystemMonitor::wxFileSystemMonitor(wxEvtHandler *parent, const wxString &u
 bool wxFileSystemMonitor::Start()
 {
 #ifdef __WXGTK__
-    gnome_vfs_monitor_add(&m_h, uri.ToUTF8(), GNOME_VFS_MONITOR_DIRECTORY, &wxFileSystemMonitor::MonitorCallback, NULL);
-    m[m_h]=this;
+    for(int i=0;i<m_uri.GetCount();i++)
+    {
+        gnome_vfs_monitor_add(&m_h, m_uri.ToUTF8(), GNOME_VFS_MONITOR_DIRECTORY, &wxFileSystemMonitor::MonitorCallback, &m_uri[i]);
+        m_h.push_back(h);
+        m[h]=this;
+    }
 #else
     m_monitorthread=new DirMonitorThread(this, m_uri, false, false, m_eventfilter, 100);
     m_monitorthread->Create();
@@ -129,8 +151,11 @@ bool wxFileSystemMonitor::Start()
 wxFileSystemMonitor::~wxFileSystemMonitor()
 {
 #ifdef __WXGTK__
-    gnome_vfs_monitor_cancel(m_h);
-    m.erase(m_h);
+    for(int i=0;i<m_uri.GetCount();i++)
+    {
+        gnome_vfs_monitor_cancel(m_h[i]);
+        m.erase(m_h[i]);
+    }
 #else
     delete m_monitorthread;
 #endif

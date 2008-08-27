@@ -58,7 +58,6 @@ typedef void (wxEvtHandler::*wxFileSysMonitorEventFunction)(wxFileSysMonitorEven
     (wxObjectEventFunction) (wxEventFunction) \
     wxStaticCastEvent( wxFileSysMonitorEventFunction, & fn ), (wxObject *) NULL ),
 
-
 /*
 LISTENER_TYPE_FILE      //GNOME_VFS_MONITOR_FILE
 LISTENER_TYPE_DIRECTORY //GNOME_VFS_MONITOR_DIRECTORY
@@ -99,8 +98,8 @@ FILE_ACTION_RENAMED_NEW_NAME
 #define MONITOR_FILE_CHANGED 0x001
 #define MONITOR_FILE_DELETED 0x002
 #define MONITOR_FILE_CREATED 0x004
-#define MONITOR_FILE_ATTRIBUTES 0x080
 //TODO: Decide if it is worth having these
+#define MONITOR_FILE_ATTRIBUTES 0x080
 #define MONITOR_FILE_STARTEXEC 0x010
 #define MONITOR_FILE_STOPEXEC 0x020
 
@@ -108,18 +107,16 @@ FILE_ACTION_RENAMED_NEW_NAME
 
 #define DEFAULT_MONITOR_FILTER MONITOR_FILE_CHANGED|MONITOR_FILE_DELETED|MONITOR_FILE_CREATED|MONITOR_FILE_ATTRIBUTES
 
-
 class wxFileSystemMonitor: public wxEvtHandler
 {
 public:
-    wxFileSystemMonitor(wxEvtHandler *parent=NULL, const wxString &uri=wxEmptyString, int eventfilter=DEFAULT_MONITOR_FILTER);
+    wxFileSystemMonitor(const wxArrayString &uri, int eventfilter=DEFAULT_MONITOR_FILTER, wxEvtHandler *parent=NULL);
     virtual ~wxFileSystemMonitor();
     bool Start();
     virtual void Callback(int EventType, const wxString &uri);
     void OnMonitorEvent(wxFileSysMonitorEvent &e);
-protected:
 private:
-    wxString m_uri;
+    wxArrayString m_uri;
     wxEvtHandler *m_parent;
     int m_eventfilter;
 #ifdef __WXGTK__

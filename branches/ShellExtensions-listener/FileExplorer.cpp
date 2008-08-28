@@ -131,6 +131,7 @@ FileExplorer::FileExplorer(wxWindow *parent,wxWindowID id,
     m_update_active=false;
     m_updater_cancel=false;
     m_update_expand=false;
+    m_dir_monitor=NULL;
     m_show_hidden=false;
     m_parse_cvs=false;
     m_parse_hg=false;

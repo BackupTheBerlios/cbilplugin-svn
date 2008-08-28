@@ -134,23 +134,47 @@ class DirMonitorThread : public wxThread
 public:
     DirMonitorThread(wxEvtHandler *parent, wxArrayString pathnames, bool singleshot, bool subtree, DWORD notifyfilter, DWORD waittime_ms)
         : wxThread(wxTHREAD_JOINABLE)
-    { m_parent=parent; m_waittime=waittime_ms; m_subtree=subtree; m_singleshot=singleshot; m_pathnames=pathnames; m_notifyfilter=notifyfilter; m_handles=new HANDLE[m_pathnames.GetCount()];
-        return; }
+    {
+        m_parent=parent;
+        m_waittime=waittime_ms;
+        m_subtree=subtree;
+        m_singleshot=singleshot;
+        for(unsigned int i=0;i<pathnames.GetCount();i++)
+            m_pathnames.Add(pathnames[i].c_str());
+        m_notifyfilter=notifyfilter;
+        m_handles=new HANDLE[m_pathnames.GetCount()];
+        return;
+
+    }
     void *Entry()
     {
+        wxMessageBox(_("Thread entry"));
+        bool handle_fail=false;
         for(unsigned int i=0;i<m_pathnames.GetCount();i++)
+        {
             m_handles[i]=::FindFirstChangeNotification(m_pathnames[i].c_str(), m_subtree, DEFAULT_MONITOR_FILTER_WIN32);
+            if(m_handles[i]==INVALID_HANDLE_VALUE)
+            {
+                handle_fail=true;
+                wxMessageBox(_("Big ERROR!!"));
+            }
+
+        }
         //TODO: Error checking
         PFILE_NOTIFY_INFORMATION changedata=(PFILE_NOTIFY_INFORMATION)(new char[4096]);
-        while(!TestDestroy())
+        while(!handle_fail && !TestDestroy())
         {
             DWORD result=::MsgWaitForMultipleObjects(m_pathnames.GetCount(),m_handles,false,m_waittime,DEFAULT_MONITOR_FILTER_WIN32);
             if(result!=WAIT_TIMEOUT)
             {
                 DWORD chda_len;
-                //TODO: Think I need to "open" the handle in some way in order to read it -- for now, not returning any info about the changed file...
                 HANDLE hDir = ::CreateFile(m_pathnames[result- WAIT_OBJECT_0].c_str(),FILE_LIST_DIRECTORY,FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,NULL,OPEN_EXISTING,FILE_FLAG_BACKUP_SEMANTICS,NULL);
-
+                if(hDir==INVALID_HANDLE_VALUE)
+                {
+                    wxMessageBox(_T("Handle failure"));
+                    handle_fail=true;
+                }
+                else
                 if(::ReadDirectoryChangesW(hDir, changedata, 4096, m_subtree, DEFAULT_MONITOR_FILTER_WIN32, &chda_len, NULL, NULL))
                 {
                     if(chda_len>0)
@@ -211,9 +235,11 @@ public:
         }
         delete changedata;
         for(unsigned int i=0;i<m_pathnames.GetCount();i++)
-            FindCloseChangeNotification(m_handles[i]);
+            if(m_handles[i]!=INVALID_HANDLE_VALUE)
+                FindCloseChangeNotification(m_handles[i]);
 //        wxDirectoryMonitorEvent e(wxEmptyString,MONITOR_FINISHED,wxEmptyString);
 //        m_parent->AddPendingEvent(e);
+        wxMessageBox(_("Thread exit"));
         return NULL;
     }
     ~DirMonitorThread()

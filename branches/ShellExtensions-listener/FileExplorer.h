@@ -136,6 +136,8 @@ private:
     //State information required for updating the Tree in a background thread
     wxTimer *m_updatetimer;
     FileExplorerUpdater *m_updater;
+    bool m_updater_cancel;
+    bool m_update_expand;
     wxTreeItemId m_updating_node;
     wxTreeItemId m_updated_node;
     bool m_update_active;

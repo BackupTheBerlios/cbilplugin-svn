@@ -129,6 +129,8 @@ FileExplorer::FileExplorer(wxWindow *parent,wxWindowID id,
     m_updater=NULL;
     m_updatetimer=new wxTimer(this,ID_UPDATETIMER);
     m_update_active=false;
+    m_updater_cancel=false;
+    m_update_expand=false;
     m_show_hidden=false;
     m_parse_cvs=false;
     m_parse_hg=false;
@@ -354,6 +356,7 @@ void FileExplorer::OnTimerCheckUpdates(wxTimerEvent &e)
 {
     if(m_update_active)
         return;
+    m_updater_cancel=false;
     m_updater=new FileExplorerUpdater(this);
     m_updated_node=m_updating_node;
     m_update_active=true;
@@ -365,7 +368,7 @@ void FileExplorer::OnUpdateTreeItems(wxCommandEvent &e)
     m_updater->Wait();
     wxTreeItemId ti=m_updated_node;
 //    cbMessageBox(_T("Update Returned"));
-    if(!ti.IsOk())
+    if(m_updater_cancel || !ti.IsOk())
     { //NODE WAS DELETED - REFRESH NOW!
         m_updater->Delete();
         m_updater=NULL;
@@ -398,7 +401,7 @@ void FileExplorer::OnUpdateTreeItems(wxCommandEvent &e)
                 ch=m_Tree->GetNextChild(ti,cookie);
             }
         }
-        //LOOP THROUGH THE ADDERS LIST AND ADD THOSE ITEMS FROM THE TREE
+        //LOOP THROUGH THE ADDERS LIST AND ADD THOSE ITEMS TO THE TREE
     //    cbMessageBox(_T("Adders"));
         for(FileDataVec::iterator it=adders.begin();it!=adders.end();it++)
         {
@@ -410,7 +413,10 @@ void FileExplorer::OnUpdateTreeItems(wxCommandEvent &e)
         m_Tree->Thaw();
     }
     if(!m_Tree->IsExpanded(ti))
+    {
+        m_update_expand=true;
         m_Tree->Expand(ti);
+    }
     //RESTART THE TIMER
     m_update_active=false;
     if(m_updating_node!=m_updated_node)
@@ -593,8 +599,11 @@ wxString FileExplorer::GetFullPath(const wxTreeItemId &ti)
 
 void FileExplorer::OnExpand(wxTreeEvent &event)
 {
-    if(m_updated_node==event.GetItem())
+    if(m_updated_node==event.GetItem() && m_update_expand)
+    {
+        m_update_expand=false;
         return;
+    }
     m_updating_node=event.GetItem();//GetNextExpandedNode(m_updating_node);
     m_updatetimer->Start(10,true);
     event.Veto();

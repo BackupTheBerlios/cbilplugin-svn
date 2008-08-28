@@ -96,7 +96,7 @@ private:
     void OnAddToProject(wxCommandEvent &event);
 
     // Events related to updating the Tree
-    void OnDirMonitor(wxFileSysMonitorEvent &e);
+    void OnDirMonitor(wxDirectoryMonitorEvent &e);
     void OnUpdateTreeItems(wxCommandEvent &event);
     void OnTimerCheckUpdates(wxTimerEvent &event);
     void OnExecRequest(wxCommandEvent &event);
@@ -139,7 +139,7 @@ private:
     wxTreeItemId m_updating_node;
     wxTreeItemId m_updated_node;
     bool m_update_active;
-    wxFileSystemMonitor *m_dir_monitor;
+    wxDirectoryMonitor *m_dir_monitor;
 
     int m_ticount; //number of selections
     wxString m_dragtest;

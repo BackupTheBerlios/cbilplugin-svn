@@ -15,21 +15,16 @@
 
 #define DEFAULT_MONITOR_FILTER MONITOR_FILE_CHANGED|MONITOR_FILE_DELETED|MONITOR_FILE_CREATED|MONITOR_FILE_ATTRIBUTES
 
-#ifdef __WXGTK__
-#include <libgnomevfs/gnome-vfs.h>
-#include <vector>
-#else //WINDOWS
 class DirMonitorThread;
-#endif
 
-class wxFileSystemMonitor;
+class wxDirectoryMonitor;
 
 ///////////////////////////////////////
 // EVENT CODE /////////////////////////
 ///////////////////////////////////////
 
 /*
-Defines a wxFileSysMonitorEvent with public member naming the path
+Defines a wxDirectoryMonitorEvent with public member naming the path
 monitored, the file or directory creating the event and the code for
 the event. Also used to send Termination events (on win32)
 
@@ -42,48 +37,42 @@ DECLARE_LOCAL_EVENT_TYPE(wxEVT_MONITOR_NOTIFY, -1)
 DECLARE_LOCAL_EVENT_TYPE(wxEVT_MONITOR_NOTIFY2, -1)
 END_DECLARE_EVENT_TYPES()
 
-class wxFileSysMonitorEvent: public wxNotifyEvent
+class wxDirectoryMonitorEvent: public wxNotifyEvent
 {
 public:
-    wxFileSysMonitorEvent(const wxString &mon_dir, int event_type, const wxString &uri);
-    wxFileSysMonitorEvent(const wxFileSysMonitorEvent& c);
-    wxEvent *Clone() const { return new wxFileSysMonitorEvent(*this); }
-    ~wxFileSysMonitorEvent() {}
+    wxDirectoryMonitorEvent(const wxString &mon_dir, int event_type, const wxString &uri);
+    wxDirectoryMonitorEvent(const wxDirectoryMonitorEvent& c);
+    wxEvent *Clone() const { return new wxDirectoryMonitorEvent(*this); }
+    ~wxDirectoryMonitorEvent() {}
     wxString m_mon_dir;
     int m_event_type;
     wxString m_info_uri;
 };
 
-typedef void (wxEvtHandler::*wxFileSysMonitorEventFunction)(wxFileSysMonitorEvent&);
+typedef void (wxEvtHandler::*wxDirectoryMonitorEventFunction)(wxDirectoryMonitorEvent&);
 
 #define EVT_MONITOR_NOTIFY(id, fn) \
     DECLARE_EVENT_TABLE_ENTRY( wxEVT_MONITOR_NOTIFY, id, -1, \
     (wxObjectEventFunction) (wxEventFunction) (wxCommandEventFunction) (wxNotifyEventFunction) \
-    wxStaticCastEvent( wxFileSysMonitorEventFunction, & fn ), (wxObject *) NULL ),
+    wxStaticCastEvent( wxDirectoryMonitorEventFunction, & fn ), (wxObject *) NULL ),
 
 ///////////////////////////////////////
 // DIRECTORY MONITOR CLASS ////////////
 ///////////////////////////////////////
 
-class wxFileSystemMonitor: public wxEvtHandler
+class wxDirectoryMonitor: public wxEvtHandler
 {
 public:
-    wxFileSystemMonitor(wxEvtHandler *parent, const wxArrayString &uri, int eventfilter=DEFAULT_MONITOR_FILTER);
-    virtual ~wxFileSystemMonitor();
+    wxDirectoryMonitor(wxEvtHandler *parent, const wxArrayString &uri, int eventfilter=DEFAULT_MONITOR_FILTER);
+    virtual ~wxDirectoryMonitor();
     bool Start();
-    void OnMonitorEvent(wxFileSysMonitorEvent &e);
+    void OnMonitorEvent(wxDirectoryMonitorEvent &e);
     void OnMonitorEvent2(wxCommandEvent &e);
 private:
     wxArrayString m_uri;
     wxEvtHandler *m_parent;
     int m_eventfilter;
-#ifdef __WXGTK__
-    void Callback(wxString *mon_dir, int EventType, const wxString &uri);
-    static void MonitorCallback(GnomeVFSMonitorHandle *handle, const gchar *monitor_uri, const gchar *info_uri, GnomeVFSMonitorEventType event_type, gpointer user_data);
-    std::vector<GnomeVFSMonitorHandle *> m_h;
-#else //WINDOWS
     DirMonitorThread *m_monitorthread;
-#endif
     DECLARE_EVENT_TABLE()
 };
 

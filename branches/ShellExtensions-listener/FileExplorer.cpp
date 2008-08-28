@@ -345,7 +345,7 @@ void FileExplorer::ResetDirMonitor()
 
 void FileExplorer::OnDirMonitor(wxDirectoryMonitorEvent &e)
 {
-    //cbMessageBox(wxString::Format(_T("%s,%i,%s"),e.m_mon_dir.c_str(),e.m_event_type,e.m_info_uri.c_str()));
+    //wxMessageBox(wxString::Format(_T("%s,%i,%s"),e.m_mon_dir.c_str(),e.m_event_type,e.m_info_uri.c_str()));
     m_updatetimer->Start(100,true);
     m_updating_node=m_Tree->GetRootItem();
 }

@@ -140,6 +140,7 @@ public:
     {
         for(unsigned int i=0;i<m_pathnames.GetCount();i++)
             m_handles[i]=::FindFirstChangeNotification(m_pathnames[i].c_str(), m_subtree, DEFAULT_MONITOR_FILTER_WIN32);
+        //TODO: Error checking
         PFILE_NOTIFY_INFORMATION changedata=(PFILE_NOTIFY_INFORMATION)(new char[4096]);
         while(!TestDestroy())
         {
@@ -148,7 +149,9 @@ public:
             {
                 DWORD chda_len;
                 //TODO: Think I need to "open" the handle in some way in order to read it -- for now, not returning any info about the changed file...
-                if(false)//::ReadDirectoryChangesW(m_handles[result- WAIT_OBJECT_0], changedata, 4096, m_subtree, DEFAULT_MONITOR_FILTER_WIN32, &chda_len, NULL, NULL))
+                HANDLE hDir = ::CreateFile(m_pathnames[result- WAIT_OBJECT_0].c_str(),FILE_LIST_DIRECTORY,FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,NULL,OPEN_EXISTING,FILE_FLAG_BACKUP_SEMANTICS,NULL);
+
+                if(::ReadDirectoryChangesW(hDir, changedata, 4096, m_subtree, DEFAULT_MONITOR_FILTER_WIN32, &chda_len, NULL, NULL))
                 {
                     if(chda_len>0)
                     {
@@ -175,14 +178,14 @@ public:
                             }
                             if(action&m_notifyfilter)
                             {
-                                wxString filename(chptr->FileName,chptr->FileNameLength);
-                                wxMessageBox(_("changing ")+filename);
+                                wxString filename(chptr->FileName,chptr->FileNameLength/2); //TODO: check the div by 2
                                 wxDirectoryMonitorEvent e(m_pathnames[result- WAIT_OBJECT_0],action,filename);
                                 m_parent->AddPendingEvent(e);
                             }
                             off=chptr->NextEntryOffset;
                             chptr=(PFILE_NOTIFY_INFORMATION)((char*)chptr+off);
                         } while(off>0);
+                        //wxMessageBox(_T("all changes read successfully"));
                     }
                     else
                     {
@@ -196,7 +199,9 @@ public:
                     //wxCommandEvent e(wxEVT_NOTIFY_UPDATE_TREE);
                     wxDirectoryMonitorEvent e(m_pathnames[result- WAIT_OBJECT_0],MONITOR_TOO_MANY_CHANGES,wxEmptyString);
                     m_parent->AddPendingEvent(e);
+                    //TODO: exit the thread and make a proper error event?
                 }
+                ::CloseHandle(hDir);
             }
             for(unsigned int i=0;i<m_pathnames.GetCount();i++)
                 if(!FindNextChangeNotification(m_handles[i]))

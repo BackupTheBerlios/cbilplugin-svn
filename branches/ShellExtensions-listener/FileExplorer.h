@@ -9,8 +9,8 @@
 #include <sdk.h>
 #include <vector>
 #include "FileExplorerSettings.h"
-#include "FileListener.h"
-#include "filesystemmonitor.h"
+#include "FileExplorerUpdater.h"
+#include "directorymonitor.h"
 
 class Expansion;
 

@@ -134,12 +134,13 @@ END_EVENT_TABLE()
 #ifdef __WXGTK__
 void wxFileSystemMonitor::MonitorCallback(GnomeVFSMonitorHandle *handle, const gchar *monitor_uri, const gchar *info_uri, GnomeVFSMonitorEventType event_type, gpointer user_data)
 {
+    wxMessageBox(_T("monitor event"));
     if(m.find(handle)!=m.end())
-        m[handle]->Callback((wxString*)user_data, event_type, wxString::FromUTF8(info_uri));
+        m[handle]->Callback((wxString *)user_data, event_type, wxString::FromUTF8(info_uri));
     //TODO: ELSE WARNING/ERROR
 }
 
-void wxFileSystemMonitor::Callback(const wxString &mon_dir,  int EventType, const wxString &info_uri)
+void wxFileSystemMonitor::Callback(wxString *mon_dir,  int EventType, const wxString &info_uri)
 {
     //TODO: DETERMINE WHETHER THIS CALLBACK HAPPENS ON A THREAD?
     //TODO: Convert to gnomevfs events to the MONITOR_FILE_XXX action types, filtering those that aren't wanted
@@ -167,7 +168,7 @@ void wxFileSystemMonitor::Callback(const wxString &mon_dir,  int EventType, cons
     }
     if(action&m_eventfilter)
     {
-        wxFileSysMonitorEvent e(mon_dir,action,info_uri);
+        wxFileSysMonitorEvent e(mon_dir->c_str(),action,info_uri);
         this->AddPendingEvent(e);
     }
 }
@@ -183,6 +184,8 @@ void wxFileSystemMonitor::OnMonitorEvent(wxFileSysMonitorEvent &e)
 
 wxFileSystemMonitor::wxFileSystemMonitor(wxEvtHandler *parent, const wxArrayString &uri, int eventfilter)
 {
+    if(!gnome_vfs_initialized())
+        gnome_vfs_init();
     m_parent=parent;
     m_uri=uri;
     m_eventfilter=eventfilter;
@@ -193,9 +196,16 @@ bool wxFileSystemMonitor::Start()
 #ifdef __WXGTK__
     for(unsigned int i=0;i<m_uri.GetCount();i++)
     {
-        gnome_vfs_monitor_add(&m_h[i], m_uri[i].ToUTF8(), GNOME_VFS_MONITOR_DIRECTORY, &wxFileSystemMonitor::MonitorCallback, &m_uri[i]);
-        m_h.push_back(h);
-        m[h]=this;
+        GnomeVFSMonitorHandle *h;
+        if(gnome_vfs_monitor_add(&h, m_uri[i].ToUTF8(), GNOME_VFS_MONITOR_DIRECTORY, &wxFileSystemMonitor::MonitorCallback, &m_uri[i])==GNOME_VFS_OK)
+        {
+            m_h.push_back(h);
+            m[h]=this;
+        } else
+        {
+            m_h.push_back(NULL);
+            wxMessageBox(_T("fail ")+m_uri[i]);
+        }
     }
 #else
     m_monitorthread=new DirMonitorThread(this, m_uri, false, false, m_eventfilter, 100);
@@ -210,8 +220,11 @@ wxFileSystemMonitor::~wxFileSystemMonitor()
 #ifdef __WXGTK__
     for(unsigned int i=0;i<m_uri.GetCount();i++)
     {
-        gnome_vfs_monitor_cancel(m_h[i]);
-        m.erase(m_h[i]);
+        if(m_h[i])
+        {
+            gnome_vfs_monitor_cancel(m_h[i]);
+            m.erase(m_h[i]);
+        }
     }
 #else
     delete m_monitorthread;

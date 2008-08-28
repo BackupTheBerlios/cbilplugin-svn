@@ -17,6 +17,7 @@
 
 #ifdef __WXGTK__
 #include <libgnomevfs/gnome-vfs.h>
+#include <vector>
 #else //WINDOWS
 class DirMonitorThread;
 #endif
@@ -77,9 +78,9 @@ private:
     wxEvtHandler *m_parent;
     int m_eventfilter;
 #ifdef __WXGTK__
-    void Callback(const wxString &mon_dir, int EventType, const wxString &uri);
+    void Callback(wxString *mon_dir, int EventType, const wxString &uri);
     static void MonitorCallback(GnomeVFSMonitorHandle *handle, const gchar *monitor_uri, const gchar *info_uri, GnomeVFSMonitorEventType event_type, gpointer user_data);
-    GnomeVFSMonitorHandle *m_h;
+    std::vector<GnomeVFSMonitorHandle *> m_h;
 #else //WINDOWS
     DirMonitorThread *m_monitorthread;
 #endif

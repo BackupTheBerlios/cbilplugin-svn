@@ -29,9 +29,9 @@ static MonMap m;
 class DirMonitorThread : public wxThread
 {
 public:
-    DirMonitorThread(wxEvtHandler *parent, wxArrayString pathnames, bool singleshot, bool subtree, DWORD notifyfilter, DWORD waittime_ms)
+    DirMonitorThread(wxEvtHandler *parent, wxArrayString pathnames, bool singleshot, bool subtree, int notifyfilter, int waittime_ms)
         : wxThread(wxTHREAD_JOINABLE)
-    { m_parent=parent; m_waittime=waittime_ms; m_subtree=subtree; m_singleshot=singleshot; m_pathnames=pathnames; m_notifyfilter=notifyfilter; m_handles=new HANDLE[m_pathnames.GetCount()];
+    { m_parent=parent; m_waittime=waittime_ms; m_subtree=subtree; m_singleshot=singleshot; m_pathnames=pathnames; m_notifyfilter=notifyfilter;
         return; }
     void *Entry()
     {
@@ -65,12 +65,12 @@ public:
             }
         }
 
-        g_main_context_unref();
+        g_main_context_unref(context);
         return NULL;
     }
     ~DirMonitorThread()
     {
-        main_loop_quit(loop);
+        g_main_loop_quit(loop);
         if(IsRunning())
             Delete();
     }
@@ -98,15 +98,15 @@ public:
                 action=MONITOR_FILE_ATTRIBUTES;
                 break;
         }
-        if(action&m_eventfilter)
+        if(action&m_notifyfilter)
         {
-            wxDirectoryMonitorEvent e(mon_dir->c_str(),action,info_uri);
+            wxDirectoryMonitorEvent e(mon_dir->c_str(),action,uri);
             m_parent->AddPendingEvent(e);
         }
     }
     static void MonitorCallback(GnomeVFSMonitorHandle *handle, const gchar *monitor_uri, const gchar *info_uri, GnomeVFSMonitorEventType event_type, gpointer user_data)
     {
-        wxMessageBox(_T("monitor event"));
+//        wxMessageBox(_T("monitor event"));
         if(m.find(handle)!=m.end())
             m[handle]->Callback((wxString *)user_data, event_type, wxString::FromUTF8(info_uri));
         //TODO: ELSE WARNING/ERROR
@@ -114,7 +114,7 @@ public:
 
     GMainContext *context;
     GMainLoop *loop;
-    DWORD m_waittime;
+    int m_waittime;
     bool m_subtree;
     bool m_singleshot;
     wxArrayString m_pathnames;

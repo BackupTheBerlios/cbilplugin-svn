@@ -126,10 +126,10 @@
 			<Option target="default" />
 			<Option target="detachable" />
 		</Unit>
-		<Unit filename="FileListener.cpp">
+		<Unit filename="FileExplorerUpdater.cpp">
 			<Option target="se-plugin" />
 		</Unit>
-		<Unit filename="FileListener.h">
+		<Unit filename="FileExplorerUpdater.h">
 			<Option target="se-plugin" />
 		</Unit>
 		<Unit filename="PipedProcessCtrl.cpp">
@@ -173,10 +173,10 @@
 			<Option target="se-plugin" />
 			<Option target="detachable" />
 		</Unit>
-		<Unit filename="filesystemmonitor.cpp">
+		<Unit filename="directorymonitor.cpp">
 			<Option target="se-plugin" />
 		</Unit>
-		<Unit filename="filesystemmonitor.h">
+		<Unit filename="directorymonitor.h">
 			<Option target="se-plugin" />
 		</Unit>
 		<Unit filename="manifest.xml">

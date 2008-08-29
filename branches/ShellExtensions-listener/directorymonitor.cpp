@@ -225,11 +225,13 @@ public:
                     m_parent->AddPendingEvent(e);
                     //TODO: exit the thread and make a proper error event?
                 }
-                ::CloseHandle(hDir);
+                if(hDir!=INVALID_HANDLE_VALUE)
+                    ::CloseHandle(hDir);
             }
-            for(unsigned int i=0;i<m_pathnames.GetCount();i++)
-                if(!FindNextChangeNotification(m_handles[i]))
-                    break;
+            if(!handle_fail)
+                for(unsigned int i=0;i<m_pathnames.GetCount();i++)
+                    if(!FindNextChangeNotification(m_handles[i]))
+                        break;
             if(m_singleshot)
                 break;
         }

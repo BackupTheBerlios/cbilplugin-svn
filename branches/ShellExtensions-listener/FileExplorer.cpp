@@ -284,6 +284,11 @@ void FileExplorer::GetExpandedNodes(wxTreeItemId ti, Expansion *exp)
 
 void FileExplorer::GetExpandedPaths(wxTreeItemId ti,wxArrayString &paths)
 {
+    if(!ti.IsOk())
+    {
+        wxMessageBox(_("node error"));
+        return;
+    }
     if(m_Tree->IsExpanded(ti))
         paths.Add(GetFullPath(ti));
     wxTreeItemIdValue cookie;
@@ -353,15 +358,34 @@ void FileExplorer::OnDirMonitor(wxDirectoryMonitorEvent &e)
     m_updating_node=m_Tree->GetRootItem();
 }
 
+static int up_count=0;
+
 void FileExplorer::OnTimerCheckUpdates(wxTimerEvent &e)
 {
     if(m_update_active)
         return;
+    LogMessage(wxString::Format(_("update begin %i"),up_count));
     m_updater_cancel=false;
     m_updater=new FileExplorerUpdater(this);
     m_updated_node=m_updating_node;
     m_update_active=true;
     m_updater->Update(m_updating_node);
+}
+
+bool FileExplorer::ValidateRoot()
+{
+    wxTreeItemId ti=m_Tree->GetRootItem();
+    while(true)
+    {
+    if(!ti.IsOk())
+        break;
+    if(m_Tree->GetItemImage(ti)!=fvsFolder)
+        break;
+    if(!wxFileName::DirExists(GetFullPath(ti)))
+        break;
+    return true;
+    }
+    return false;
 }
 
 void FileExplorer::OnUpdateTreeItems(wxCommandEvent &e)
@@ -374,8 +398,13 @@ void FileExplorer::OnUpdateTreeItems(wxCommandEvent &e)
         m_updater->Delete();
         m_updater=NULL;
         m_update_active=false;
-        m_updating_node=GetNextExpandedNode(m_updating_node);
-        m_updatetimer->Start(10,true);
+        if(ValidateRoot())
+        {
+            m_updating_node=m_Tree->GetRootItem();
+            m_updatetimer->Start(10,true);
+        }
+        LogMessage(wxString::Format(_("update fail %i"),up_count));
+        up_count++;
         return;
     }
 //    cbMessageBox(_T("Node OK"));
@@ -436,6 +465,8 @@ void FileExplorer::OnUpdateTreeItems(wxCommandEvent &e)
     }
     m_updater->Delete();
     m_updater=NULL;
+    LogMessage(wxString::Format(_("update end %i"),up_count));
+    up_count++;
 }
 
 bool FileExplorer::AddTreeItems(const wxTreeItemId &ti)

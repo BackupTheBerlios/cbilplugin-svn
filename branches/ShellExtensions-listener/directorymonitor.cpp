@@ -1,6 +1,8 @@
 #include "directorymonitor.h"
 #include <vector>
+#include "se_globals.h"
 
+static int mon_count=0;
 
 DEFINE_EVENT_TYPE(wxEVT_MONITOR_NOTIFY)
 DEFINE_EVENT_TYPE(wxEVT_MONITOR_NOTIFY2)
@@ -288,6 +290,7 @@ wxDirectoryMonitor::wxDirectoryMonitor(wxEvtHandler *parent, const wxArrayString
 
 bool wxDirectoryMonitor::Start()
 {
+    LogMessage(wxString::Format(_("monitor start %i"),mon_count));
     m_monitorthread=new DirMonitorThread(this, m_uri, false, false, m_eventfilter, 100);
     m_monitorthread->Create();
     m_monitorthread->Run();
@@ -296,5 +299,7 @@ bool wxDirectoryMonitor::Start()
 
 wxDirectoryMonitor::~wxDirectoryMonitor()
 {
+    LogMessage(wxString::Format(_("monitor stop %i"),mon_count));
+    mon_count++;
     delete m_monitorthread;
 }

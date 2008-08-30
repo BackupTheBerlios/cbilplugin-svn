@@ -29,6 +29,8 @@ FileExplorerUpdater::~FileExplorerUpdater()
 
 void FileExplorerUpdater::Update(const wxTreeItemId &ti)
 {
+    wxString chkpath=m_fe->GetFullPath(ti);
+    LogMessage(chkpath);
     m_path=wxString(m_fe->GetFullPath(ti).c_str());
     m_wildcard=wxString(m_fe->m_WildCards->GetValue().c_str());
     GetTreeState(ti);
@@ -41,14 +43,20 @@ void FileExplorerUpdater::Update(const wxTreeItemId &ti)
 
 void *FileExplorerUpdater::Entry()
 {
-    if(!GetCurrentState(m_path))
-        return NULL;
-    if(!CalcChanges())
-        return NULL;
-    ::wxMutexGuiEnter();
     wxCommandEvent ne(wxEVT_NOTIFY_UPDATE_TREE,0);
+    if(!GetCurrentState(m_path))
+    {
+        m_fe->m_updater_cancel=true; //TODO: SEND A CANCEL EVENT INSTEAD
+        m_fe->AddPendingEvent(ne);
+        return NULL;
+    }
+    if(!CalcChanges())
+    {
+        m_fe->m_updater_cancel=true;
+        m_fe->AddPendingEvent(ne);
+        return NULL;
+    }
     m_fe->AddPendingEvent(ne);
-    ::wxMutexGuiLeave();
     return NULL;
 }
 

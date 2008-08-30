@@ -120,6 +120,7 @@ private:
     void GetExpandedNodes(wxTreeItemId ti, Expansion *exp);
     void GetExpandedPaths(wxTreeItemId ti, wxArrayString &paths);
     wxTreeItemId GetNextExpandedNode(wxTreeItemId ti);
+    bool ValidateRoot();
     void RecursiveRebuild(wxTreeItemId ti, Expansion *exp);
     void Refresh(wxTreeItemId ti);
     void SetImages();

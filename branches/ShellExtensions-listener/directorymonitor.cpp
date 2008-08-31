@@ -51,7 +51,7 @@ public:
             {
                 m_h.push_back(NULL);
                 //TODO: Log an error
-                //wxMessageBox(_T("fail ")+m_pathnames[i]);
+                LogMessage(_T("fail ")+m_pathnames[i]);
             }
         }
         //TODO: Add a timer for killing singleshot instances
@@ -108,7 +108,7 @@ public:
     }
     static void MonitorCallback(GnomeVFSMonitorHandle *handle, const gchar *monitor_uri, const gchar *info_uri, GnomeVFSMonitorEventType event_type, gpointer user_data)
     {
-//        wxMessageBox(_T("monitor event"));
+        LogMessage(_T("monitor event"));
         if(m.find(handle)!=m.end())
             m[handle]->Callback((wxString *)user_data, event_type, wxString::FromUTF8(info_uri));
         //TODO: ELSE WARNING/ERROR
@@ -150,7 +150,6 @@ public:
     }
     void *Entry()
     {
-        wxMessageBox(_("Thread entry"));
         bool handle_fail=false;
         for(unsigned int i=0;i<m_pathnames.GetCount();i++)
         {
@@ -158,7 +157,6 @@ public:
             if(m_handles[i]==INVALID_HANDLE_VALUE)
             {
                 handle_fail=true;
-                wxMessageBox(_("Big ERROR!!"));
             }
 
         }
@@ -173,7 +171,6 @@ public:
                 HANDLE hDir = ::CreateFile(m_pathnames[result- WAIT_OBJECT_0].c_str(),FILE_LIST_DIRECTORY,FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,NULL,OPEN_EXISTING,FILE_FLAG_BACKUP_SEMANTICS,NULL);
                 if(hDir==INVALID_HANDLE_VALUE)
                 {
-                    wxMessageBox(_T("Handle failure"));
                     handle_fail=true;
                 }
                 else
@@ -243,7 +240,6 @@ public:
                 FindCloseChangeNotification(m_handles[i]);
 //        wxDirectoryMonitorEvent e(wxEmptyString,MONITOR_FINISHED,wxEmptyString);
 //        m_parent->AddPendingEvent(e);
-        wxMessageBox(_("Thread exit"));
         return NULL;
     }
     ~DirMonitorThread()

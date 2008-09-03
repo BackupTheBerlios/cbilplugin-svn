@@ -23,7 +23,10 @@ FileExplorerUpdater::~FileExplorerUpdater()
         m_exec_mutex->Unlock();
     }
     if(IsRunning())
-        Delete();
+    {
+        m_kill=true;
+        Wait();
+    }
 }
 
 
@@ -118,7 +121,7 @@ bool FileExplorerUpdater::GetCurrentState(const wxString &path)
         }*/
 
     bool cont = dir.GetFirst(&filename,wxEmptyString,flags);
-    while ( cont && !TestDestroy())
+    while ( cont && !TestDestroy() && !m_kill)
     {
         int itemstate;
         bool match=true;

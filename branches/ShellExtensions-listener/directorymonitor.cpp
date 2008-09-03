@@ -74,7 +74,7 @@ public:
     {
         g_main_loop_quit(loop);
         if(IsRunning())
-            Delete();
+            Wait()//Delete();
     }
     void Callback(const wxString *mon_dir, int EventType, const wxString &uri)
     {
@@ -137,6 +137,7 @@ public:
     DirMonitorThread(wxEvtHandler *parent, wxArrayString pathnames, bool singleshot, bool subtree, DWORD notifyfilter, DWORD waittime_ms)
         : wxThread(wxTHREAD_JOINABLE)
     {
+        m_kill=false;
         m_parent=parent;
         m_waittime=waittime_ms;
         m_subtree=subtree;
@@ -162,7 +163,7 @@ public:
         }
         //TODO: Error checking
         PFILE_NOTIFY_INFORMATION changedata=(PFILE_NOTIFY_INFORMATION)(new char[4096]);
-        while(!handle_fail && !TestDestroy())
+        while(!handle_fail && !TestDestroy() && !m_kill)
         {
             DWORD result=::MsgWaitForMultipleObjects(m_pathnames.GetCount(),m_handles,false,m_waittime,DEFAULT_MONITOR_FILTER_WIN32);
             if(result!=WAIT_TIMEOUT)
@@ -244,13 +245,15 @@ public:
     }
     ~DirMonitorThread()
     {
+        m_kill=true;
         if(IsRunning())
-            Delete();
+            Wait();//Delete();
         delete [] m_handles;
     }
     DWORD m_waittime;
     bool m_subtree;
     bool m_singleshot;
+    bool m_kill;
     wxArrayString m_pathnames;
     DWORD m_notifyfilter;
     HANDLE *m_handles;

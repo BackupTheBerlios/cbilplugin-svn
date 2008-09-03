@@ -33,8 +33,13 @@ typedef std::vector<FileData> FileDataVec;
 class FileExplorerUpdater: public wxEvtHandler, public wxThread
 {
 public:
-    FileExplorerUpdater(FileExplorer *fe) : wxThread(wxTHREAD_JOINABLE) { m_fe=fe;     m_exec_proc=NULL;
-return;}
+    FileExplorerUpdater(FileExplorer *fe) : wxThread(wxTHREAD_JOINABLE)
+    {
+        m_kill=false;
+        m_fe=fe;
+        m_exec_proc=NULL;
+        return;
+    }
     ~FileExplorerUpdater();
     FileDataVec m_adders;
     FileDataVec m_removers;
@@ -66,6 +71,7 @@ private:
     void GetTreeState(const wxTreeItemId &ti);
     bool GetCurrentState(const wxString &path);
     bool CalcChanges(); //creates the vector of adders and removers
+    bool m_kill;
     DECLARE_EVENT_TABLE()
 };
 

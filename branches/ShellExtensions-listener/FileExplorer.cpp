@@ -339,21 +339,25 @@ void FileExplorer::UpdateAbort()
 
 void FileExplorer::ResetDirMonitor()
 {
-    if(m_dir_monitor)
-        delete m_dir_monitor;
+    wxDirectoryMonitor *m=m_dir_monitor;
     wxArrayString paths;
     GetExpandedPaths(m_Tree->GetRootItem(),paths);
 //    wxString outstr=_("Starting monitor on\n");
 //    for(int i=0;i<paths.GetCount();i++)
 //        outstr+=paths[i]+_("\n");
 //    cbMessageBox(outstr);
+    LogMessage(_("mon cons"));
     m_dir_monitor=new wxDirectoryMonitor(this,paths);
+    LogMessage(_("mon start"));
     m_dir_monitor->Start();
+    LogMessage(_("mon started"));
+    if(m)
+        delete m;
 }
 
 void FileExplorer::OnDirMonitor(wxDirectoryMonitorEvent &e)
 {
-    //wxMessageBox(wxString::Format(_T("%s,%i,%s"),e.m_mon_dir.c_str(),e.m_event_type,e.m_info_uri.c_str()));
+    LogMessage(wxString::Format(_T("%s,%i,%s"),e.m_mon_dir.c_str(),e.m_event_type,e.m_info_uri.c_str()));
     m_updatetimer->Start(100,true);
     m_updating_node=m_Tree->GetRootItem();
 }

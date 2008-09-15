@@ -67,6 +67,7 @@ public:
     wxDirectoryMonitor(wxEvtHandler *parent, const wxArrayString &uri, int eventfilter=DEFAULT_MONITOR_FILTER);
     virtual ~wxDirectoryMonitor();
     bool Start();
+    void ChangePaths(const wxArrayString &uri);
     void OnMonitorEvent(wxDirectoryMonitorEvent &e);
     void OnMonitorEvent2(wxCommandEvent &e);
 private:

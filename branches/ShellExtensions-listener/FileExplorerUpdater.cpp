@@ -41,6 +41,7 @@ void FileExplorerUpdater::Update(const wxTreeItemId &ti)
     {
         SetPriority(20);
         Run();
+        LogMessage(_("update thread started"));
     }
 }
 

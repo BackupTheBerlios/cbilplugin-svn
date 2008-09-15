@@ -131,7 +131,12 @@ FileExplorer::FileExplorer(wxWindow *parent,wxWindowID id,
     m_update_active=false;
     m_updater_cancel=false;
     m_update_expand=false;
-    m_dir_monitor=NULL;
+    LogMessage(_("mon constructor"));
+    m_dir_monitor=new wxDirectoryMonitor(this,wxArrayString());
+    LogMessage(_("mon start"));
+    m_dir_monitor->Start();
+    LogMessage(_("mon started"));
+
     m_show_hidden=false;
     m_parse_cvs=false;
     m_parse_hg=false;
@@ -339,25 +344,22 @@ void FileExplorer::UpdateAbort()
 
 void FileExplorer::ResetDirMonitor()
 {
-    wxDirectoryMonitor *m=m_dir_monitor;
     wxArrayString paths;
     GetExpandedPaths(m_Tree->GetRootItem(),paths);
 //    wxString outstr=_("Starting monitor on\n");
 //    for(int i=0;i<paths.GetCount();i++)
 //        outstr+=paths[i]+_("\n");
 //    cbMessageBox(outstr);
-    LogMessage(_("mon cons"));
-    m_dir_monitor=new wxDirectoryMonitor(this,paths);
-    LogMessage(_("mon start"));
-    m_dir_monitor->Start();
-    LogMessage(_("mon started"));
-    if(m)
-        delete m;
+    m_dir_monitor->ChangePaths(paths);
 }
 
 void FileExplorer::OnDirMonitor(wxDirectoryMonitorEvent &e)
 {
     LogMessage(wxString::Format(_T("%s,%i,%s"),e.m_mon_dir.c_str(),e.m_event_type,e.m_info_uri.c_str()));
+    if(e.m_event_type==MONITOR_TOO_MANY_CHANGES)
+    {
+        LogMessage(_("directory change read error"));
+    }
     m_updatetimer->Start(100,true);
     m_updating_node=m_Tree->GetRootItem();
 }
@@ -394,7 +396,9 @@ bool FileExplorer::ValidateRoot()
 
 void FileExplorer::OnUpdateTreeItems(wxCommandEvent &e)
 {
+    LogMessage(_("Update thread notify finished"));
     m_updater->Wait();
+    LogMessage(_("Update thread finished"));
     wxTreeItemId ti=m_updated_node;
 //    cbMessageBox(_T("Update Returned"));
     if(m_updater_cancel || !ti.IsOk())
@@ -457,17 +461,20 @@ void FileExplorer::OnUpdateTreeItems(wxCommandEvent &e)
         m_updatetimer->Start(10,true);
     else
     {
-        //TODO: Restart the timer if there are more open nodes
+        //TODO: Should not need to do anything here (see OnDirMonitor)
         m_updating_node=GetNextExpandedNode(m_updating_node);
         if(m_updating_node!=m_Tree->GetRootItem())
             m_updatetimer->Start(10,true);
         else
             ResetDirMonitor();
+//        LogMessage(_("Done restarting updater or monitor"));
 
 //        else //TODO: Replace this with a directory monitor
 //            m_updatetimer->Start(3000,true);
     }
+    LogMessage(_("Deleting updater"));
     m_updater->Delete();
+    LogMessage(_("Deleted updater"));
     m_updater=NULL;
     LogMessage(wxString::Format(_("update end %i"),up_count));
     up_count++;

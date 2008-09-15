@@ -108,12 +108,13 @@ public:
     }
     static void MonitorCallback(GnomeVFSMonitorHandle *handle, const gchar *monitor_uri, const gchar *info_uri, GnomeVFSMonitorEventType event_type, gpointer user_data)
     {
-        LogMessage(_T("monitor event"));
         if(m.find(handle)!=m.end())
             m[handle]->Callback((wxString *)user_data, event_type, wxString::FromUTF8(info_uri));
         //TODO: ELSE WARNING/ERROR
     }
 
+    HANDLE m_interrupt_event;
+    wxMutex m_interrupt_mutex;
     GMainContext *context;
     GMainLoop *loop;
     int m_waittime;

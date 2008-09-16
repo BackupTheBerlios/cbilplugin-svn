@@ -33,7 +33,6 @@ FileExplorerUpdater::~FileExplorerUpdater()
 void FileExplorerUpdater::Update(const wxTreeItemId &ti)
 {
     wxString chkpath=m_fe->GetFullPath(ti);
-    LogMessage(chkpath);
     m_path=wxString(m_fe->GetFullPath(ti).c_str());
     m_wildcard=wxString(m_fe->m_WildCards->GetValue().c_str());
     GetTreeState(ti);
@@ -41,7 +40,6 @@ void FileExplorerUpdater::Update(const wxTreeItemId &ti)
     {
         SetPriority(20);
         Run();
-        LogMessage(_("update thread started"));
     }
 }
 

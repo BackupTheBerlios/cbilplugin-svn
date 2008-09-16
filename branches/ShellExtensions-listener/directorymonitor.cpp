@@ -482,6 +482,10 @@ void wxDirectoryMonitor::ChangePaths(const wxArrayString &uri)
 {
     m_uri=uri;
     m_monitorthread->UpdatePaths(uri);
+    wxString p=_("Monitoring:");
+    for(int i=0;i<uri.GetCount();i++)
+        p+=uri[i]+_(", ");
+    LogMessage(p);
 }
 
 

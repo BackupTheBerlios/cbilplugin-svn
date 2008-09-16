@@ -35,10 +35,94 @@ public:
         : wxThread(wxTHREAD_JOINABLE)
     { m_parent=parent; m_waittime=waittime_ms; m_subtree=subtree; m_singleshot=singleshot; m_pathnames=pathnames; m_notifyfilter=notifyfilter;
         return; }
+
+
+    static gboolean tn_prepare(GSource *source, gint *timeout_)
+    {
+        m_interrupt_mutex.Lock()
+        gboolean notify=m_thread_notify;
+        m_interrupt_mutex.Unlock();
+        *timeout_=0;
+        return notify
+    }
+    static gboolean tn_check(GSource *source)
+    {
+        m_interrupt_mutex.Lock()
+        gboolean notify=m_thread_notify;
+        m_interrupt_mutex.Unlock();
+        return notify
+    }
+    static gboolean tn_dispatch (GSource *source,GSourceFunc callback, gpointer user_data)
+    {
+        m_interrupt_mutex.Lock()
+        m_thread_notify=false;
+        m_interrupt_mutex.Unlock();
+        callback(user_data);
+        return TRUE;
+    }
+    static void tn_finalize (GSource *source)
+    {
+        return;
+    }
+    static void tn_callback(gpointer data)
+    {
+        DirMonitorThread *mon=(DirMonitorThread *)data;
+        m_interrupt_mutex.Lock();
+        mon->UpdatePathsThread();
+        m_interrupt_mutex.Unlock();
+    }
+    void UpdatePathsThread()
+    {
+        std::vector<GnomeVFSMonitorHandle *> new_h;
+        for(size_t i=0;i<m_pathnames.GetCount();i++) //delete monitors that aren't needed
+        {
+            int index=m_update_paths.Index(m_pathnames[i]);
+            if(index==wxNOT_FOUND && m_h[i])
+            {
+                gnome_vfs_monitor_cancel(m_h[i]);
+                m.erase(m_h[i]);
+            }
+        }
+        for(size_t i=0;i<m_update_paths.GetCount();i++) // copy existing monitors and add new ones
+        {
+            int index=m_pathnames.Index(m_update_paths[i]);
+            if(index!=wxNOT_FOUND)
+            {
+                new_h[i]=m_h[index];
+            }
+            else
+            {
+                if(gnome_vfs_monitor_add(&h, m_pathnames[i].ToUTF8(), GNOME_VFS_MONITOR_DIRECTORY, &DirMonitorThread::MonitorCallback, &m_update_paths[i])==GNOME_VFS_OK)
+                {
+                    new_h[i]=h;
+                    m[h]=this;
+                } else
+                {
+                    new_h[i]=NULL;
+                    //TODO: Notify owner error
+                    //LogMessage(_T("fail ")+m_pathnames[i]);
+                }
+            }
+        }
+        m_h=new_h; //replace the old with the new
+        m_pathnames=m_update_paths;
+    }
     void *Entry()
     {
-        context=g_main_context_new ();
+        m_interrupt_mutex.Lock();
+        m_thread_notify=false;
+        context=g_main_context_new();
         loop=g_main_loop_new(context,FALSE);
+
+        GSourceFuncs thread_notify_sf;
+        thread_notify_sf.prepare=&tn_prepare;
+        thread_notify_sf.check=&tn_check;
+        thread_notify_sf.dispatch=&tn_dispatch;
+        thread_notify_sf.finalize=&tn_finalize;
+
+        GSource *thread_notify_s=g_source_new (&thread_notify_sf, sizeof(GSource));
+        g_source_attach(thread_notify_s,context);
+        g_source_set_callback(thread_notify_s,&tn_callback,this,NULL);
 
         for(unsigned int i=0;i<m_pathnames.GetCount();i++)
         {
@@ -55,9 +139,11 @@ public:
             }
         }
         //TODO: Add a timer for killing singleshot instances
+        m_interrupt_mutex.Unlock();
 
         g_main_loop_run(loop);
 
+        m_interrupt_mutex.Lock();
         for(unsigned int i=0;i<m_pathnames.GetCount();i++)
         {
             if(m_h[i])
@@ -67,7 +153,9 @@ public:
             }
         }
 
+        g_source_destroy(thread_notify_s); //TODO: g_source_remove as well?
         g_main_context_unref(context);
+        m_interrupt_mutex.Unlock();
         return NULL;
     }
     ~DirMonitorThread()
@@ -112,15 +200,26 @@ public:
             m[handle]->Callback((wxString *)user_data, event_type, wxString::FromUTF8(info_uri));
         //TODO: ELSE WARNING/ERROR
     }
+    void UpdatePaths(const wxArrayString &paths)
+    {
+        m_interrupt_mutex.Lock();
+        m_update_paths.Empty();
+        for(unsigned int i=0;i<paths.GetCount();i++)
+            m_update_paths.Add(paths[i].c_str());
+        m_thread_notify=true;
+        m_interrupt_mutex.Unlock();
 
-    HANDLE m_interrupt_event;
+    }
+
+
+    bool m_thread_notify;
     wxMutex m_interrupt_mutex;
     GMainContext *context;
     GMainLoop *loop;
     int m_waittime;
     bool m_subtree;
     bool m_singleshot;
-    wxArrayString m_pathnames;
+    wxArrayString m_pathnames, m_update_paths;
     int m_notifyfilter;
     std::vector<GnomeVFSMonitorHandle *> m_h;
     wxEvtHandler *m_parent;
@@ -394,6 +493,7 @@ bool wxDirectoryMonitor::Start()
 
 void wxDirectoryMonitor::ChangePaths(const wxArrayString &uri)
 {
+    m_uri=uri;
     m_monitorthread->UpdatePaths(uri);
 }
 

@@ -33,6 +33,38 @@ int ID_FILE_UPBUTTON=wxNewId();
 int ID_FILEREFRESH=wxNewId();
 int ID_FILEADDTOPROJECT=wxNewId();
 
+class UpdateQueue
+{
+public:
+    void Add(const wxTreeItemId &ti)
+    {
+        for(std::list<wxTreeItemId>::iterator it=qdata.begin();it!=qdata.end();it++)
+        {
+            if(*it==ti)
+            {
+                qdata.erase(it);
+                break;
+            }
+        }
+        qdata.push_front(ti);
+    }
+    bool Pop(wxTreeItemId &ti)
+    {
+        if(qdata.empty())
+            return false;
+        ti=qdata.front();
+        qdata.pop_front();
+        return true;
+    }
+    void Clear()
+    {
+        qdata.clear();
+    }
+private:
+    std::list<wxTreeItemId> qdata;
+};
+
+
 class DirTraverseFind : public wxDirTraverser     {
 public:
     DirTraverseFind(const wxString& wildcard) : m_files(), m_wildcard(wildcard) { }
@@ -126,16 +158,14 @@ FileExplorer::FileExplorer(wxWindow *parent,wxWindowID id,
     long style, const wxString& name):
     wxPanel(parent,id,pos,size,style, name)
 {
+    m_update_queue=new UpdateQueue;
     m_updater=NULL;
     m_updatetimer=new wxTimer(this,ID_UPDATETIMER);
     m_update_active=false;
     m_updater_cancel=false;
     m_update_expand=false;
-    LogMessage(_("mon constructor"));
     m_dir_monitor=new wxDirectoryMonitor(this,wxArrayString());
-    LogMessage(_("mon start"));
     m_dir_monitor->Start();
-    LogMessage(_("mon started"));
 
     m_show_hidden=false;
     m_parse_cvs=false;
@@ -177,6 +207,14 @@ FileExplorer::FileExplorer(wxWindow *parent,wxWindowID id,
 
     SetSizer(bs);
 }
+
+FileExplorer::~FileExplorer()
+{
+    WriteConfig();
+    UpdateAbort();
+    delete m_update_queue;
+}
+
 
 bool FileExplorer::SetRootFolder(wxString root)
 {
@@ -270,6 +308,19 @@ wxTreeItemId FileExplorer::GetNextExpandedNode(wxTreeItemId ti)
     return m_Tree->GetRootItem();
 }
 
+bool FileExplorer::GetItemFromPath(const wxString &path, wxTreeItemId &ti)
+{
+    ti=m_Tree->GetRootItem();
+    do
+    {
+        if(path==GetFullPath(ti))
+            return true;
+        ti=GetNextExpandedNode(ti);
+    } while(ti!=m_Tree->GetRootItem());
+    return false;
+}
+
+
 void FileExplorer::GetExpandedNodes(wxTreeItemId ti, Expansion *exp)
 {
     exp->name=m_Tree->GetItemText(ti);
@@ -360,8 +411,12 @@ void FileExplorer::OnDirMonitor(wxDirectoryMonitorEvent &e)
     {
         LogMessage(_("directory change read error"));
     }
-    m_updatetimer->Start(100,true);
-    m_updating_node=m_Tree->GetRootItem();
+    wxTreeItemId ti;
+    if(GetItemFromPath(e.m_mon_dir,ti))
+    {
+        m_update_queue->Add(ti);
+        m_updatetimer->Start(100,true);
+    }
 }
 
 static int up_count=0;
@@ -370,12 +425,15 @@ void FileExplorer::OnTimerCheckUpdates(wxTimerEvent &e)
 {
     if(m_update_active)
         return;
-    LogMessage(wxString::Format(_("update begin %i"),up_count));
-    m_updater_cancel=false;
-    m_updater=new FileExplorerUpdater(this);
-    m_updated_node=m_updating_node;
-    m_update_active=true;
-    m_updater->Update(m_updating_node);
+    wxTreeItemId ti;
+    if(m_update_queue->Pop(ti))
+    {
+        m_updater_cancel=false;
+        m_updater=new FileExplorerUpdater(this);
+        m_updated_node=ti;
+        m_update_active=true;
+        m_updater->Update(m_updated_node);
+    }
 }
 
 bool FileExplorer::ValidateRoot()
@@ -396,19 +454,19 @@ bool FileExplorer::ValidateRoot()
 
 void FileExplorer::OnUpdateTreeItems(wxCommandEvent &e)
 {
-    LogMessage(_("Update thread notify finished"));
     m_updater->Wait();
-    LogMessage(_("Update thread finished"));
     wxTreeItemId ti=m_updated_node;
 //    cbMessageBox(_T("Update Returned"));
     if(m_updater_cancel || !ti.IsOk())
     { //NODE WAS DELETED - REFRESH NOW!
+        //TODO: Should only need to clean up and restart the timer (no need to change queue)
         m_updater->Delete();
         m_updater=NULL;
         m_update_active=false;
+        ResetDirMonitor();
         if(ValidateRoot())
         {
-            m_updating_node=m_Tree->GetRootItem();
+            m_update_queue->Add(m_Tree->GetRootItem());
             m_updatetimer->Start(10,true);
         }
         LogMessage(wxString::Format(_("update fail %i"),up_count));
@@ -455,28 +513,26 @@ void FileExplorer::OnUpdateTreeItems(wxCommandEvent &e)
         m_update_expand=true;
         m_Tree->Expand(ti);
     }
-    //RESTART THE TIMER
     m_update_active=false;
-    if(m_updating_node!=m_updated_node)
-        m_updatetimer->Start(10,true);
-    else
-    {
-        //TODO: Should not need to do anything here (see OnDirMonitor)
-        m_updating_node=GetNextExpandedNode(m_updating_node);
-        if(m_updating_node!=m_Tree->GetRootItem())
-            m_updatetimer->Start(10,true);
-        else
-            ResetDirMonitor();
-//        LogMessage(_("Done restarting updater or monitor"));
-
-//        else //TODO: Replace this with a directory monitor
-//            m_updatetimer->Start(3000,true);
-    }
-    LogMessage(_("Deleting updater"));
+    // Restart the monitor (TODO: move this elsewhere??)
+    ResetDirMonitor();
+    //RESTART THE TIMER
+    m_updatetimer->Start(10,true);
+//    else
+//    {
+//        //TODO: Should not need to do anything here (see OnDirMonitor)
+//        m_updating_node=GetNextExpandedNode(m_updating_node);
+//        if(m_updating_node!=m_Tree->GetRootItem())
+//            m_updatetimer->Start(10,true);
+//        else
+//            ResetDirMonitor();
+////        LogMessage(_("Done restarting updater or monitor"));
+//
+////        else //TODO: Replace this with a directory monitor
+////            m_updatetimer->Start(3000,true);
+//    }
     m_updater->Delete();
-    LogMessage(_("Deleted updater"));
     m_updater=NULL;
-    LogMessage(wxString::Format(_("update end %i"),up_count));
     up_count++;
 }
 
@@ -647,7 +703,7 @@ void FileExplorer::OnExpand(wxTreeEvent &event)
         m_update_expand=false;
         return;
     }
-    m_updating_node=event.GetItem();//GetNextExpandedNode(m_updating_node);
+    m_update_queue->Add(event.GetItem());
     m_updatetimer->Start(10,true);
     event.Veto();
     //AddTreeItems(event.GetItem());

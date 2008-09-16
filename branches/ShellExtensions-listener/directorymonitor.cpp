@@ -100,7 +100,6 @@ public:
                 {
                     new_h[i]=NULL;
                     //TODO: Notify owner error
-                    //LogMessage(_T("fail ")+m_pathnames[i]);
                 }
             }
         }
@@ -135,7 +134,6 @@ public:
             {
                 m_h.push_back(NULL);
                 //TODO: Log an error
-                LogMessage(_T("fail ")+m_pathnames[i]);
             }
         }
         //TODO: Add a timer for killing singleshot instances
@@ -260,18 +258,11 @@ public:
     void UpdatePaths(const wxArrayString &paths)
     {
         m_interrupt_mutex2.Lock();
-        wxString p;
-        for(unsigned int i=0;i<paths.GetCount();i++)
-            p+=paths[i]+_("\n");
-        LogMessage(_("updating paths\n")+p);
-        LogMessage(_("updating paths mutex dance -- got 2nd lock"));
         m_update_paths.Empty();
         for(unsigned int i=0;i<paths.GetCount();i++)
             m_update_paths.Add(paths[i].c_str());
         m_interrupt_mutex2.Unlock();
-        LogMessage(_("updating paths mutex dance begin"));
         SetEvent(m_interrupt_event);
-        LogMessage(_("updating paths mutex dance end"));
     }
     bool UpdatePathsThread()
     {
@@ -323,7 +314,6 @@ public:
         while(!handle_fail && !TestDestroy() && !kill)
         {
             DWORD result=::WaitForMultipleObjects(m_pathnames.GetCount()+1,m_handles,false,INFINITE);
-            wxMessageBox(_("dir mon wait done"));
             //DWORD result=::MsgWaitForMultipleObjects(m_pathnames.GetCount()+1,m_handles,false,INFINITE,0);
 //            DWORD result=::MsgWaitForMultipleObjects(m_pathnames.GetCount()+1,m_handles,false,INFINITE,DEFAULT_MONITOR_FILTER_WIN32);
             //wxMessageBox(wxString::Format(_("returned %i"),result-WAIT_OBJECT_0));
@@ -433,13 +423,11 @@ public:
     }
     ~DirMonitorThread()
     {
-        LogMessage(_("waiting for monitor thread to end"));
         if(IsRunning())
         {
             WaitKill();
             Wait();//Delete();
         }
-        LogMessage(_("monitor thread deleted successfully"));
         CloseHandle(m_interrupt_event);
     }
     HANDLE m_interrupt_event;
@@ -484,7 +472,6 @@ wxDirectoryMonitor::wxDirectoryMonitor(wxEvtHandler *parent, const wxArrayString
 
 bool wxDirectoryMonitor::Start()
 {
-    LogMessage(wxString::Format(_("monitor start %i"),mon_count));
     m_monitorthread=new DirMonitorThread(this, m_uri, false, false, m_eventfilter, 100);
     m_monitorthread->Create();
     m_monitorthread->Run();
@@ -500,7 +487,6 @@ void wxDirectoryMonitor::ChangePaths(const wxArrayString &uri)
 
 wxDirectoryMonitor::~wxDirectoryMonitor()
 {
-    LogMessage(wxString::Format(_("monitor stop %i"),mon_count));
     mon_count++;
     delete m_monitorthread;
 }

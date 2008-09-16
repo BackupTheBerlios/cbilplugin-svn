@@ -12,6 +12,8 @@
 #include "FileExplorerUpdater.h"
 #include "directorymonitor.h"
 
+class UpdateQueue;
+
 class Expansion;
 
 typedef std::vector<Expansion*> ExpList;
@@ -59,7 +61,7 @@ public:
     FileExplorer(wxWindow *parent,wxWindowID id = wxID_ANY,
         const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize,
         long style = wxTAB_TRAVERSAL|wxTE_PROCESS_ENTER, const wxString& name = _T("Files"));
-    ~FileExplorer() { WriteConfig(); if(m_updater) delete m_updater; }
+    ~FileExplorer();
     bool SetRootFolder(wxString root);
     wxString GetRootFolder() {return m_root;}
     void FindFile(const wxString &file) {}
@@ -117,6 +119,7 @@ private:
     bool IsInSelection(const wxTreeItemId &ti);
     bool AddTreeItems(const wxTreeItemId &ti);
     wxString GetFullPath(const wxTreeItemId &ti);
+    bool GetItemFromPath(const wxString &path, wxTreeItemId &ti);
     void GetExpandedNodes(wxTreeItemId ti, Expansion *exp);
     void GetExpandedPaths(wxTreeItemId ti, wxArrayString &paths);
     wxTreeItemId GetNextExpandedNode(wxTreeItemId ti);
@@ -142,6 +145,7 @@ private:
     wxTreeItemId m_updating_node;
     wxTreeItemId m_updated_node;
     bool m_update_active;
+    UpdateQueue *m_update_queue;
     wxDirectoryMonitor *m_dir_monitor;
 
     int m_ticount; //number of selections

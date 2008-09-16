@@ -21,6 +21,8 @@ wxDirectoryMonitorEvent::wxDirectoryMonitorEvent(const wxDirectoryMonitorEvent& 
 }
 
 
+
+
 #ifdef __WXGTK__
 
 #include <libgnomevfs/gnome-vfs.h>
@@ -73,7 +75,7 @@ public:
     }
     void UpdatePathsThread()
     {
-        std::vector<GnomeVFSMonitorHandle *> new_h;
+        std::vector<GnomeVFSMonitorHandle *> new_h; //TODO: initialize vector size
         for(size_t i=0;i<m_pathnames.GetCount();i++) //delete monitors that aren't needed
         {
             int index=m_update_paths.Index(m_pathnames[i]);

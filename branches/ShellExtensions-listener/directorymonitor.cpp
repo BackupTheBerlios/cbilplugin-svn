@@ -99,7 +99,7 @@ public:
             else
             {
                 GnomeVFSMonitorHandle *h;
-                if(gnome_vfs_monitor_add(&h, m_pathnames[i].ToUTF8(), GNOME_VFS_MONITOR_DIRECTORY, &DirMonitorThread::MonitorCallback, &m_update_paths[i])==GNOME_VFS_OK)
+                if(gnome_vfs_monitor_add(&h, m_update_paths[i].ToUTF8(), GNOME_VFS_MONITOR_DIRECTORY, &DirMonitorThread::MonitorCallback, &m_update_paths[i])==GNOME_VFS_OK)
                 {
                     new_h[i]=h;
                     m[h]=this;

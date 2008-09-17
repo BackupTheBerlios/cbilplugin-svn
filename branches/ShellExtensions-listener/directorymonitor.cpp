@@ -41,24 +41,27 @@ public:
 
     static gboolean tn_prepare(GSource *source, gint *timeout_)
     {
-        m_interrupt_mutex.Lock()
-        gboolean notify=m_thread_notify;
-        m_interrupt_mutex.Unlock();
+        DirMonitorThread *mon=((DirMonitorThread **)(source+1))[0];
+        mon->m_interrupt_mutex.Lock();
+        gboolean notify=mon->m_thread_notify;
+        mon->m_interrupt_mutex.Unlock();
         *timeout_=0;
-        return notify
+        return notify;
     }
     static gboolean tn_check(GSource *source)
     {
-        m_interrupt_mutex.Lock()
-        gboolean notify=m_thread_notify;
-        m_interrupt_mutex.Unlock();
-        return notify
+        DirMonitorThread *mon=((DirMonitorThread **)(source+1))[0];
+        mon->m_interrupt_mutex.Lock();
+        gboolean notify=mon->m_thread_notify;
+        mon->m_interrupt_mutex.Unlock();
+        return notify;
     }
     static gboolean tn_dispatch (GSource *source,GSourceFunc callback, gpointer user_data)
     {
-        m_interrupt_mutex.Lock()
-        m_thread_notify=false;
-        m_interrupt_mutex.Unlock();
+        DirMonitorThread *mon=((DirMonitorThread **)(source+1))[0];
+        mon->m_interrupt_mutex.Lock();
+        mon->m_thread_notify=false;
+        mon->m_interrupt_mutex.Unlock();
         callback(user_data);
         return TRUE;
     }
@@ -66,16 +69,17 @@ public:
     {
         return;
     }
-    static void tn_callback(gpointer data)
+    static gboolean tn_callback(gpointer data)
     {
         DirMonitorThread *mon=(DirMonitorThread *)data;
-        m_interrupt_mutex.Lock();
+        mon->m_interrupt_mutex.Lock();
         mon->UpdatePathsThread();
-        m_interrupt_mutex.Unlock();
+        mon->m_interrupt_mutex.Unlock();
+        return true;
     }
     void UpdatePathsThread()
     {
-        std::vector<GnomeVFSMonitorHandle *> new_h; //TODO: initialize vector size
+        std::vector<GnomeVFSMonitorHandle *> new_h(m_update_paths.GetCount(),NULL); //TODO: initialize vector size
         for(size_t i=0;i<m_pathnames.GetCount();i++) //delete monitors that aren't needed
         {
             int index=m_update_paths.Index(m_pathnames[i]);
@@ -94,6 +98,7 @@ public:
             }
             else
             {
+                GnomeVFSMonitorHandle *h;
                 if(gnome_vfs_monitor_add(&h, m_pathnames[i].ToUTF8(), GNOME_VFS_MONITOR_DIRECTORY, &DirMonitorThread::MonitorCallback, &m_update_paths[i])==GNOME_VFS_OK)
                 {
                     new_h[i]=h;
@@ -121,7 +126,8 @@ public:
         thread_notify_sf.dispatch=&tn_dispatch;
         thread_notify_sf.finalize=&tn_finalize;
 
-        GSource *thread_notify_s=g_source_new (&thread_notify_sf, sizeof(GSource));
+        GSource *thread_notify_s=g_source_new (&thread_notify_sf, sizeof(GSource)+sizeof(DirMonitorThread*));
+        ((DirMonitorThread**)(thread_notify_s+1))[0]=this;
         g_source_attach(thread_notify_s,context);
         g_source_set_callback(thread_notify_s,&tn_callback,this,NULL);
 

@@ -20,9 +20,6 @@ wxDirectoryMonitorEvent::wxDirectoryMonitorEvent(const wxDirectoryMonitorEvent& 
     m_info_uri=wxString(c.m_info_uri.c_str());
 }
 
-
-
-
 #ifdef __WXGTK__
 
 #include <libgnomevfs/gnome-vfs.h>
@@ -35,44 +32,38 @@ class DirMonitorThread : public wxThread
 public:
     DirMonitorThread(wxEvtHandler *parent, wxArrayString pathnames, bool singleshot, bool subtree, int notifyfilter, int waittime_ms)
         : wxThread(wxTHREAD_JOINABLE)
-    { m_parent=parent; m_waittime=waittime_ms; m_subtree=subtree; m_singleshot=singleshot; m_pathnames=pathnames; m_notifyfilter=notifyfilter;
-        return; }
-
-
-    static gboolean tn_prepare(GSource *source, gint *timeout_)
     {
-        DirMonitorThread *mon=((DirMonitorThread **)(source+1))[0];
-        mon->m_interrupt_mutex.Lock();
-        gboolean notify=mon->m_thread_notify;
-        mon->m_interrupt_mutex.Unlock();
-        *timeout_=0;
-        return notify;
-    }
-    static gboolean tn_check(GSource *source)
-    {
-        DirMonitorThread *mon=((DirMonitorThread **)(source+1))[0];
-        mon->m_interrupt_mutex.Lock();
-        gboolean notify=mon->m_thread_notify;
-        mon->m_interrupt_mutex.Unlock();
-        return notify;
-    }
-    static gboolean tn_dispatch (GSource *source,GSourceFunc callback, gpointer user_data)
-    {
-        DirMonitorThread *mon=((DirMonitorThread **)(source+1))[0];
-        mon->m_interrupt_mutex.Lock();
-        mon->m_thread_notify=false;
-        mon->m_interrupt_mutex.Unlock();
-        callback(user_data);
-        return TRUE;
-    }
-    static void tn_finalize (GSource *source)
-    {
+        m_parent=parent;
+        m_waittime=waittime_ms;
+        m_subtree=subtree;
+        m_singleshot=singleshot;
+        m_pathnames=pathnames;
+        m_notifyfilter=notifyfilter;
+        int pipehandles[2];
+        pipe(pipehandles);
+        m_msg_rcv=pipehandles[0];
+        m_msg_send=pipehandles[1];
+        m_msg_rcv_c=g_io_channel_unix_new(pipehandles[0]);
+//        write(m_msg_send,"ab",2);
+//        char d='1';
+//        read(m_msg_rcv,&d,1);
+//        wxMessageBox(wxString::FromUTF8(&d,1));
+//        GError *err;
+//        gsize len;
+//        gchar c='1';
+//        g_io_channel_read_chars(m_msg_rcv_c,&c,1,&len,&err);
+//        wxMessageBox(wxString::FromUTF8(&c,1));
         return;
     }
-    static gboolean tn_callback(gpointer data)
+    static gboolean tn_callback(GIOChannel *channel, GIOCondition cond, gpointer data)
     {
         DirMonitorThread *mon=(DirMonitorThread *)data;
         mon->m_interrupt_mutex.Lock();
+        char c;
+//        GError *err;
+//        gsize read;
+        read(mon->m_msg_rcv, &c, 1);
+//        GIOStatus s=g_io_channel_read_chars(mon->m_msg_rcv, &c, 1, &read, &err);
         mon->UpdatePathsThread();
         mon->m_interrupt_mutex.Unlock();
         return true;
@@ -120,17 +111,7 @@ public:
         context=g_main_context_new();
         loop=g_main_loop_new(context,FALSE);
 
-        GSourceFuncs thread_notify_sf;
-        thread_notify_sf.prepare=&tn_prepare;
-        thread_notify_sf.check=&tn_check;
-        thread_notify_sf.dispatch=&tn_dispatch;
-        thread_notify_sf.finalize=&tn_finalize;
-
-        GSource *thread_notify_s=g_source_new (&thread_notify_sf, sizeof(GSource)+sizeof(DirMonitorThread*));
-        ((DirMonitorThread**)(thread_notify_s+1))[0]=this;
-        g_source_attach(thread_notify_s,context);
-        g_source_set_callback(thread_notify_s,&tn_callback,this,NULL);
-
+        guint result=g_io_add_watch(m_msg_rcv_c, G_IO_IN, &tn_callback, this);
         for(unsigned int i=0;i<m_pathnames.GetCount();i++)
         {
             GnomeVFSMonitorHandle *h;
@@ -159,7 +140,9 @@ public:
             }
         }
 
-        g_source_destroy(thread_notify_s); //TODO: g_source_remove as well?
+        GError *err;
+        GIOStatus s=g_io_channel_shutdown(m_msg_rcv_c, true, &err);
+
         g_main_context_unref(context);
         m_interrupt_mutex.Unlock();
         return NULL;
@@ -169,6 +152,8 @@ public:
         g_main_loop_quit(loop);
         if(IsRunning())
             Wait();//Delete();
+        close(m_msg_rcv);
+        close(m_msg_send);
     }
     void Callback(const wxString *mon_dir, int EventType, const wxString &uri)
     {
@@ -212,12 +197,25 @@ public:
         m_update_paths.Empty();
         for(unsigned int i=0;i<paths.GetCount();i++)
             m_update_paths.Add(paths[i].c_str());
-        m_thread_notify=true;
+        GError *err;
+        //GIOStatus s=g_io_channel_write_unichar(m_msg_send, 'm',&err);
+        char m='m';
+        gsize num;
+        write(m_msg_send,&m,1);
+        //flush(m_msg_send);
+//        GIOStatus s=g_io_channel_write_chars(m_msg_send, &m, 1, &num,&err);
+//        if(s!=G_IO_STATUS_NORMAL)
+//            wxMessageBox(_("Write error!"));
+//        s=g_io_channel_flush(m_msg_send, &err);
+//        if(s!=G_IO_STATUS_NORMAL)
+//            wxMessageBox(_("Flush error!"));
         m_interrupt_mutex.Unlock();
 
     }
 
-
+    int m_msg_rcv;
+    int m_msg_send;
+    GIOChannel *m_msg_rcv_c;
     bool m_thread_notify;
     wxMutex m_interrupt_mutex;
     GMainContext *context;
@@ -458,13 +456,11 @@ BEGIN_EVENT_TABLE(wxDirectoryMonitor, wxEvtHandler)
 //    EVT_COMMAND(0, wxEVT_MONITOR_NOTIFY2, FileExplorer::OnMonitorEvent2)
 END_EVENT_TABLE()
 
-
 void wxDirectoryMonitor::OnMonitorEvent(wxDirectoryMonitorEvent &e)
 {
     if(m_parent)
         m_parent->AddPendingEvent(e);
 }
-
 
 wxDirectoryMonitor::wxDirectoryMonitor(wxEvtHandler *parent, const wxArrayString &uri, int eventfilter)
 {
@@ -495,7 +491,6 @@ void wxDirectoryMonitor::ChangePaths(const wxArrayString &uri)
         p+=uri[i]+_(", ");
     LogMessage(p);
 }
-
 
 wxDirectoryMonitor::~wxDirectoryMonitor()
 {

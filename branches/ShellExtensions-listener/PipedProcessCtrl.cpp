@@ -3,6 +3,8 @@
 #include <wx/regex.h>
 #include "PipedProcessCtrl.h"
 #include <globals.h>
+#include <wx/txtstrm.h>
+
 
 ////////////////////////////////////// PipedProcessCtrl /////////////////////////////////////////////
 int ID_PROC=wxNewId();
@@ -119,35 +121,31 @@ void PipedProcessCtrl::SyncOutput(int maxchars)
     int lineno=m_textctrl->GetNumberOfLines()-1;
     if(lineno<0)
         lineno=0;
+    wxTextInputStream tis(*m_istream);
+    wxStopWatch sw;
     while(m_proc->IsInputAvailable())
     {
-        char buf0[maxchars+1];
-        for(int i=0;i<maxchars+1;i++)
-            buf0[i]=0;
-        m_istream->Read(buf0,maxchars);
-        wxString m_latest=wxString::FromAscii(buf0);
+        wxString m_latest=tis.ReadLine()+_("\n");
         m_textctrl->AppendText(m_latest);
-        if(oneshot)
+        if(oneshot && sw.Time()>30)
             break;
     }
-    if(m_proc->IsErrorAvailable())
-    {
-        wxTextAttr ta(wxColour(255,0,0));
-        wxTextAttr oldta=m_textctrl->GetDefaultStyle();
-        m_textctrl->SetDefaultStyle(ta);
-        while(m_proc->IsErrorAvailable())
+    if(!(oneshot && sw.Time()>30))
+        if(m_proc->IsErrorAvailable())
         {
-            char buf0[maxchars+1];
-            for(int i=0;i<maxchars+1;i++)
-                buf0[i]=0;
-            m_estream->Read(buf0,maxchars);
-            wxString m_latest=wxString::FromAscii(buf0);
-            m_textctrl->AppendText(m_latest);
-            if(oneshot)
-                break;
+            wxTextInputStream tes(*m_estream);
+            wxTextAttr ta(wxColour(255,0,0));
+            wxTextAttr oldta=m_textctrl->GetDefaultStyle();
+            m_textctrl->SetDefaultStyle(ta);
+            while(m_proc->IsErrorAvailable())
+            {
+                wxString m_latest=tes.ReadLine()+_("\n");
+                m_textctrl->AppendText(m_latest);
+                if(oneshot && sw.Time()>30)
+                    break;
+            }
+            m_textctrl->SetDefaultStyle(oldta);
         }
-        m_textctrl->SetDefaultStyle(oldta);
-    }
     if(m_parselinks)
         ParseLinks(lineno,m_textctrl->GetNumberOfLines());
 }

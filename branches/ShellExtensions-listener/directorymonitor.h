@@ -1,6 +1,8 @@
 #ifndef WXFILESYSTEMMONITOR_H
 #define WXFILESYSTEMMONITOR_H
 
+
+
 #include <wx/wx.h>
 
 #define MONITOR_TERMINATE 0x010000

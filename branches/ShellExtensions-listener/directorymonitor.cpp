@@ -294,6 +294,8 @@ public:
         delete [] m_handles;
         m_handles=handles;
         m_pathnames=m_update_paths;
+        if(m_pathnames.GetCount()!=m_update_paths.GetCount())
+            wxMessageBox(_("yikes!"));
         m_handles[m_pathnames.GetCount()]=m_interrupt_event;
         for(size_t i=0;i<m_update_paths.GetCount();i++)
             if(m_handles[i]==INVALID_HANDLE_VALUE)
@@ -319,7 +321,8 @@ public:
         bool kill=false;
         while(!handle_fail && !TestDestroy() && !kill)
         {
-            DWORD result=::WaitForMultipleObjects(m_pathnames.GetCount()+1,m_handles,false,INFINITE);
+            DWORD result=::MsgWaitForMultipleObjects(m_pathnames.GetCount()+1,m_handles,false,INFINITE,0);
+            wxMessageBox(_("dir mon wait satisfied"));
             //DWORD result=::MsgWaitForMultipleObjects(m_pathnames.GetCount()+1,m_handles,false,INFINITE,0);
 //            DWORD result=::MsgWaitForMultipleObjects(m_pathnames.GetCount()+1,m_handles,false,INFINITE,DEFAULT_MONITOR_FILTER_WIN32);
             //wxMessageBox(wxString::Format(_("returned %i"),result-WAIT_OBJECT_0));
@@ -334,12 +337,14 @@ public:
             else
             if(result - WAIT_OBJECT_0==m_pathnames.GetCount())
             {
+                wxMessageBox(_("dir mon update"));
                 m_interrupt_mutex2.Lock();
                 kill=m_kill;
                 if(!m_kill)
                     if(!UpdatePathsThread())
                         handle_fail=true;
                 m_interrupt_mutex2.Unlock();
+                ResetEvent(m_interrupt_event);
             }
             else
             if(result>= WAIT_OBJECT_0 && result- WAIT_OBJECT_0<m_pathnames.GetCount())
@@ -352,11 +357,11 @@ public:
                     handle_fail=true;
                 }
                 else
-                while(::ReadDirectoryChangesW(hDir, changedata, 4096, m_subtree, DEFAULT_MONITOR_FILTER_WIN32, &chda_len, NULL, NULL))
+                if(::ReadDirectoryChangesW(hDir, changedata, 4096, m_subtree, DEFAULT_MONITOR_FILTER_WIN32, &chda_len, NULL, NULL))
                 {
-                    if(chda_len==0)
-                        break;
-                    if(chda_len>0)
+                    //if(chda_len==0)
+                    //    break;
+                    if(false && chda_len>0)
                     {
                         int off=0;
                         PFILE_NOTIFY_INFORMATION chptr=changedata;

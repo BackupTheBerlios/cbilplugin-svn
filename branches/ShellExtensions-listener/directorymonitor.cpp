@@ -2,6 +2,8 @@
 #include <vector>
 #include "se_globals.h"
 
+#include <iostream>
+
 static int mon_count=0;
 
 DEFINE_EVENT_TYPE(wxEVT_MONITOR_NOTIFY)
@@ -272,6 +274,7 @@ public:
     }
     bool UpdatePathsThread()
     {
+        m_interrupt_mutex2.Lock();
         HANDLE *handles=new HANDLE[m_update_paths.GetCount()+1];
         for(size_t i=0;i<m_pathnames.GetCount();i++)
         {
@@ -294,12 +297,16 @@ public:
         delete [] m_handles;
         m_handles=handles;
         m_pathnames=m_update_paths;
-        if(m_pathnames.GetCount()!=m_update_paths.GetCount())
-            wxMessageBox(_("yikes!"));
         m_handles[m_pathnames.GetCount()]=m_interrupt_event;
-        for(size_t i=0;i<m_update_paths.GetCount();i++)
+        m_interrupt_mutex2.Unlock();
+        for(size_t i=0;i<m_pathnames.GetCount();i++)
+        {
             if(m_handles[i]==INVALID_HANDLE_VALUE)
+            {
+                wxMessageBox(_("ERROR: Invalid handle"));
                 return false;
+            }
+        }
         return true;
     }
     void *Entry()
@@ -321,15 +328,14 @@ public:
         bool kill=false;
         while(!handle_fail && !TestDestroy() && !kill)
         {
+            //wxMessageBox(_("monitor wait start\n"));
             DWORD result=::MsgWaitForMultipleObjects(m_pathnames.GetCount()+1,m_handles,false,INFINITE,0);
-            wxMessageBox(_("dir mon wait satisfied"));
             //DWORD result=::MsgWaitForMultipleObjects(m_pathnames.GetCount()+1,m_handles,false,INFINITE,0);
 //            DWORD result=::MsgWaitForMultipleObjects(m_pathnames.GetCount()+1,m_handles,false,INFINITE,DEFAULT_MONITOR_FILTER_WIN32);
             //wxMessageBox(wxString::Format(_("returned %i"),result-WAIT_OBJECT_0));
             if(result==WAIT_FAILED)
             {
                 kill=true;
-                wxMessageBox(_("dir mon failed"));
             }
             else
             if(result >= WAIT_ABANDONED_0 && result - WAIT_ABANDONED_0<=m_pathnames.GetCount())
@@ -337,7 +343,7 @@ public:
             else
             if(result - WAIT_OBJECT_0==m_pathnames.GetCount())
             {
-                wxMessageBox(_("dir mon update"));
+                //wxMessageBox(_("monitor wait timeout - update request\n"));
                 m_interrupt_mutex2.Lock();
                 kill=m_kill;
                 if(!m_kill)
@@ -349,18 +355,26 @@ public:
             else
             if(result>= WAIT_OBJECT_0 && result- WAIT_OBJECT_0<m_pathnames.GetCount())
             {
+                //wxMessageBox(_("monitor wait directory change\n"));
                 //wxMessageBox(_("dir event on ")+m_pathnames[result- WAIT_OBJECT_0]);
                 DWORD chda_len;
                 HANDLE hDir = ::CreateFile(m_pathnames[result- WAIT_OBJECT_0].c_str(),FILE_LIST_DIRECTORY,FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,NULL,OPEN_EXISTING,FILE_FLAG_BACKUP_SEMANTICS,NULL);
+                //wxMessageBox(_("open directory change handle\n"));
                 if(hDir==INVALID_HANDLE_VALUE)
                 {
                     handle_fail=true;
                 }
                 else
-                if(::ReadDirectoryChangesW(hDir, changedata, 4096, m_subtree, DEFAULT_MONITOR_FILTER_WIN32, &chda_len, NULL, NULL))
+                {
+                    wxDirectoryMonitorEvent e(m_pathnames[result- WAIT_OBJECT_0],MONITOR_TOO_MANY_CHANGES,wxEmptyString);
+                    m_parent->AddPendingEvent(e);
+
+                }
+                if(false && ::ReadDirectoryChangesW(hDir, changedata, 4096, m_subtree, DEFAULT_MONITOR_FILTER_WIN32, &chda_len, NULL, NULL))
                 {
                     //if(chda_len==0)
                     //    break;
+                    //wxMessageBox(_("reading directory change\n"));
                     if(false && chda_len>0)
                     {
                         int off=0;
@@ -396,7 +410,6 @@ public:
                     }
                     else
                     {
-                        wxMessageBox(_T("mon error"));
                         //too many changes, tell parent to manually read the directory
                         wxDirectoryMonitorEvent e(m_pathnames[result- WAIT_OBJECT_0],MONITOR_TOO_MANY_CHANGES,wxEmptyString);
                         m_parent->AddPendingEvent(e);
@@ -413,7 +426,10 @@ public:
                 if(hDir!=INVALID_HANDLE_VALUE)
                     ::CloseHandle(hDir);
                 if(!FindNextChangeNotification(m_handles[result- WAIT_OBJECT_0]))
+                {
+                    wxMessageBox(_("ERROR: Could not set next change notification"));
                     break;
+                }
 //                if(!handle_fail)
 //                    for(unsigned int i=0;i<m_pathnames.GetCount();i++)
 //                        if(!FindNextChangeNotification(m_handles[i]))
@@ -427,7 +443,7 @@ public:
             if(m_handles[i]!=INVALID_HANDLE_VALUE)
                 FindCloseChangeNotification(m_handles[i]);
         delete [] m_handles;
-        wxMessageBox(_("Monitor died"));
+        wxMessageBox(_("ERROR: Monitor died"));
 //        wxDirectoryMonitorEvent e(wxEmptyString,MONITOR_FINISHED,wxEmptyString);
 //        m_parent->AddPendingEvent(e);
         return NULL;

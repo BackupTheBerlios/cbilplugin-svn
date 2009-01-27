@@ -406,7 +406,7 @@ void FileExplorer::ResetDirMonitor()
 
 void FileExplorer::OnDirMonitor(wxDirectoryMonitorEvent &e)
 {
-    LogMessage(wxString::Format(_T("%s,%i,%s"),e.m_mon_dir.c_str(),e.m_event_type,e.m_info_uri.c_str()));
+    LogMessage(wxString::Format(_T("Dir Event: %s,%i,%s"),e.m_mon_dir.c_str(),e.m_event_type,e.m_info_uri.c_str()));
     if(e.m_event_type==MONITOR_TOO_MANY_CHANGES)
     {
         LogMessage(_("directory change read error"));

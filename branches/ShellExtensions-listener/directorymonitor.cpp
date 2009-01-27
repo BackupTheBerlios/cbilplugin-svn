@@ -371,10 +371,16 @@ public:
             if(result>= WAIT_OBJECT_0 && result- WAIT_OBJECT_0<m_pathnames.GetCount())
             {
                 //wxMessageBox(_("monitor wait directory change\n"));
-                wxMessageBox(_("dir event on ")+m_pathnames[result- WAIT_OBJECT_0]);
+                //wxMessageBox(_("dir event on ")+m_pathnames[result- WAIT_OBJECT_0]);
                 DWORD chda_len;
+                {
+                    //too many changes, tell parent to manually read the directory
+                    //wxMessageBox(_("sending dir event on ")+m_pathnames[result- WAIT_OBJECT_0]);
+                    wxDirectoryMonitorEvent e(m_pathnames[result- WAIT_OBJECT_0],MONITOR_TOO_MANY_CHANGES,wxEmptyString);
+                    m_parent->AddPendingEvent(e);
+                }
                 //wxMessageBox(_("open directory change handle\n"));
-                if(::ReadDirectoryChangesW(m_filehandles[result- WAIT_OBJECT_0], changedata, 4096, m_subtree, DEFAULT_MONITOR_FILTER_WIN32, &chda_len, NULL, NULL))
+                if(false && ::ReadDirectoryChangesW(m_filehandles[result- WAIT_OBJECT_0], changedata, 4096, m_subtree, DEFAULT_MONITOR_FILTER_WIN32, &chda_len, NULL, NULL))
                 {
                     //if(chda_len==0)
                     //    break;
@@ -415,6 +421,7 @@ public:
                     else
                     {
                         //too many changes, tell parent to manually read the directory
+                        //wxMessageBox(_("sending dir event on ")+m_pathnames[result- WAIT_OBJECT_0]);
                         wxDirectoryMonitorEvent e(m_pathnames[result- WAIT_OBJECT_0],MONITOR_TOO_MANY_CHANGES,wxEmptyString);
                         m_parent->AddPendingEvent(e);
                     }
@@ -427,8 +434,6 @@ public:
 //                    m_parent->AddPendingEvent(e);
 //                    //TODO: exit the thread and make a proper error event?
 //                }
-                if(m_filehandles[result-WAIT_OBJECT_0]!=INVALID_HANDLE_VALUE)
-                    ::CloseHandle(m_filehandles[result-WAIT_OBJECT_0]);
                 if(!FindNextChangeNotification(m_handles[result- WAIT_OBJECT_0]))
                 {
                     wxMessageBox(_("ERROR: Could not set next change notification"));
@@ -444,8 +449,12 @@ public:
         }
         delete changedata;
         for(unsigned int i=0;i<m_pathnames.GetCount();i++)
+        {
             if(m_handles[i]!=INVALID_HANDLE_VALUE)
                 FindCloseChangeNotification(m_handles[i]);
+            if(m_filehandles[i]!=INVALID_HANDLE_VALUE)
+                ::CloseHandle(m_filehandles[i]);
+        }
         delete [] m_handles;
         wxMessageBox(_("ERROR: Monitor died"));
 //        wxDirectoryMonitorEvent e(wxEmptyString,MONITOR_FINISHED,wxEmptyString);

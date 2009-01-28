@@ -234,7 +234,12 @@ public:
 #endif
 #ifdef __WXMSW__
 
-#define DEFAULT_MONITOR_FILTER_WIN32 FILE_NOTIFY_CHANGE_FILE_NAME|FILE_NOTIFY_CHANGE_DIR_NAME|FILE_NOTIFY_CHANGE_ATTRIBUTES|FILE_NOTIFY_CHANGE_SIZE|FILE_NOTIFY_CHANGE_LAST_WRITE|FILE_NOTIFY_CHANGE_CREATION
+#define DEFAULT_MONITOR_FILTER_WIN32 FILE_NOTIFY_CHANGE_FILE_NAME|FILE_NOTIFY_CHANGE_DIR_NAME|FILE_NOTIFY_CHANGE_ATTRIBUTES|FILE_NOTIFY_CHANGE_SIZE|FILE_NOTIFY_CHANGE_LAST_WRITE|FILE_NOTIFY_CHANGE_LAST_ACCESS|FILE_NOTIFY_CHANGE_CREATION|FILE_NOTIFY_CHANGE_SECURITY
+
+
+#include <map>
+typedef std::map<LPOVERLAPPED, DirMonitorThread *> CallbackMap;
+static CallbackMap m;
 
 //WIN32 ONLY THREADED CLASS TO HANDLE WAITING ON DIR CHANGES ASYNCHRONOUSLY
 class DirMonitorThread : public wxThread
@@ -274,16 +279,22 @@ public:
     }
     bool UpdatePathsThread()
     {
+//        wxMessageBox(_("Updating"));
         m_interrupt_mutex2.Lock();
-        HANDLE *handles=new HANDLE[m_update_paths.GetCount()+1];
-        HANDLE *filehandles=new HANDLE[m_update_paths.GetCount()];
+        HANDLE *handles=new HANDLE[m_update_paths.GetCount()];
+        LPOVERLAPPED *overlapped=new LPOVERLAPPED[m_update_paths.GetCount()];
+        PFILE_NOTIFY_INFORMATION *changedata=new PFILE_NOTIFY_INFORMATION[m_update_paths.GetCount()];
+
         for(size_t i=0;i<m_pathnames.GetCount();i++)
         {
             int index=m_update_paths.Index(m_pathnames[i]);
-            if(index==wxNOT_FOUND)
+            if(index==wxNOT_FOUND && m_handles[i]!=INVALID_HANDLE_VALUE)
             {
-                ::FindCloseChangeNotification(m_handles[i]);
-                ::CloseHandle(m_filehandles[i]);
+//                wxMessageBox(_("Closing handle"));
+                ::CancelIo(m_handles[i]);
+                ::CloseHandle(m_handles[i]);
+                delete m_changedata[i];
+                m.erase(m_overlapped[i]);
             }
         }
         for(size_t i=0;i<m_update_paths.GetCount();i++)
@@ -292,73 +303,93 @@ public:
             if(index!=wxNOT_FOUND)
             {
                 handles[i]=m_handles[index];
-                filehandles[i]=m_filehandles[index];
+                changedata[i]=m_changedata[index];
+                overlapped[i]=m_overlapped[index];
+//                m.erase(m_overlapped[index]);
+//                m[overlapped[i]]=this;
             }
             else
             {
-                filehandles[i] = ::CreateFile(m_update_paths[i].c_str(),FILE_LIST_DIRECTORY,FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,NULL,OPEN_EXISTING,FILE_FLAG_BACKUP_SEMANTICS,NULL);
-                handles[i]=::FindFirstChangeNotification(m_update_paths[i].c_str(), m_subtree, DEFAULT_MONITOR_FILTER_WIN32);
+                handles[i] = ::CreateFile(m_update_paths[i].c_str(),FILE_LIST_DIRECTORY,FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,NULL,OPEN_EXISTING,FILE_FLAG_BACKUP_SEMANTICS|FILE_FLAG_OVERLAPPED,NULL);
+                if(handles[i]==INVALID_HANDLE_VALUE)
+                {
+//                    wxMessageBox(wxString::Format(_("handle failed on create %i"),GetLastError()));
+                    continue;
+                }
+                overlapped[i]=new_overlapped();
+                m[overlapped[i]]=this;
+                changedata[i]=(PFILE_NOTIFY_INFORMATION)(new char[4096]);
+                if(!::ReadDirectoryChangesW(handles[i], changedata[i], 4096, m_subtree, DEFAULT_MONITOR_FILTER_WIN32, NULL, overlapped[i], this->FileIOCompletionRoutine))
+                {
+//                    wxMessageBox(wxString::Format(_("handle failed on readchanges %i"),GetLastError()));
+                    continue;
+                }
             }
         }
         delete [] m_handles;
-        delete [] m_filehandles;
+        delete [] m_overlapped;
+        delete [] m_changedata;
         m_handles=handles;
-        m_filehandles=filehandles;
+        m_overlapped=overlapped;
+        m_changedata=changedata;
         m_pathnames=m_update_paths;
-        m_handles[m_pathnames.GetCount()]=m_interrupt_event;
         m_interrupt_mutex2.Unlock();
         for(size_t i=0;i<m_pathnames.GetCount();i++)
         {
-            if(m_handles[i]==INVALID_HANDLE_VALUE || m_filehandles[i]==INVALID_HANDLE_VALUE)
+            if(m_handles[i]==INVALID_HANDLE_VALUE)
             {
-                wxMessageBox(_("ERROR: Invalid handle"));
+//                wxMessageBox(_("ERROR: Invalid handle"));
                 return false;
             }
         }
         return true;
     }
+
+    static OVERLAPPED *new_overlapped()
+    {
+        OVERLAPPED *o=new OVERLAPPED;
+        o->Internal=0;
+        o->InternalHigh=0;
+        o->Offset=0;
+        o->OffsetHigh=0;
+        o->hEvent=NULL;
+        return o;
+    }
     void *Entry()
     {
         bool handle_fail=false;
-        m_handles=new HANDLE[m_pathnames.GetCount()+1];
-        m_filehandles=new HANDLE[m_pathnames.GetCount()];
+        m_handles=new HANDLE[m_pathnames.GetCount()];
+        m_overlapped=new LPOVERLAPPED[m_pathnames.GetCount()];
+        m_changedata=new PFILE_NOTIFY_INFORMATION[m_pathnames.GetCount()];
         for(unsigned int i=0;i<m_pathnames.GetCount();i++)
         {
-            m_filehandles[i] = ::CreateFile(m_pathnames[i].c_str(),FILE_LIST_DIRECTORY,FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,NULL,OPEN_EXISTING,FILE_FLAG_BACKUP_SEMANTICS,NULL);
-            if(m_filehandles[i]==INVALID_HANDLE_VALUE)
-            {
-                handle_fail=true;
-                continue;
-            }
-            m_handles[i]=::FindFirstChangeNotification(m_pathnames[i].c_str(), m_subtree, DEFAULT_MONITOR_FILTER_WIN32);
+            m_handles[i] = ::CreateFile(m_pathnames[i].c_str(),FILE_LIST_DIRECTORY,FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,NULL,OPEN_EXISTING,FILE_FLAG_BACKUP_SEMANTICS|FILE_FLAG_OVERLAPPED,NULL);
             if(m_handles[i]==INVALID_HANDLE_VALUE)
             {
                 handle_fail=true;
                 continue;
             }
+            m_overlapped[i]=new_overlapped();
+            m[m_overlapped[i]]=this;
+            m_changedata[i]=(PFILE_NOTIFY_INFORMATION)(new char[4096]);
+            if(!::ReadDirectoryChangesW(m_handles[i], m_changedata[i], 4096, m_subtree, DEFAULT_MONITOR_FILTER_WIN32, NULL, m_overlapped[i], this->FileIOCompletionRoutine))
+            {
+                handle_fail=true;
+                //wxMessageBox(_("handle failed on readchanges"));
+                continue;
+            }
         }
-        m_handles[m_pathnames.GetCount()]=m_interrupt_event;
         //TODO: Error checking
-        PFILE_NOTIFY_INFORMATION changedata=(PFILE_NOTIFY_INFORMATION)(new char[4096]);
         bool kill=false;
         while(!handle_fail && !TestDestroy() && !kill)
         {
-            //wxMessageBox(_("monitor wait start\n"));
-            DWORD result=::MsgWaitForMultipleObjects(m_pathnames.GetCount()+1,m_handles,false,INFINITE,0);
-            //DWORD result=::MsgWaitForMultipleObjects(m_pathnames.GetCount()+1,m_handles,false,INFINITE,0);
-//            DWORD result=::MsgWaitForMultipleObjects(m_pathnames.GetCount()+1,m_handles,false,INFINITE,DEFAULT_MONITOR_FILTER_WIN32);
-            //wxMessageBox(wxString::Format(_("returned %i"),result-WAIT_OBJECT_0));
-            if(result==WAIT_FAILED)
+            DWORD result=::WaitForSingleObjectEx(m_interrupt_event,INFINITE,true);
+            if(result==WAIT_FAILED || result==WAIT_ABANDONED_0)
             {
                 kill=true;
             }
-            else
-            if(result >= WAIT_ABANDONED_0 && result - WAIT_ABANDONED_0<=m_pathnames.GetCount())
-                kill=true;
-            else
-            if(result - WAIT_OBJECT_0==m_pathnames.GetCount())
+            if(result==WAIT_OBJECT_0)
             {
-                //wxMessageBox(_("monitor wait timeout - update request\n"));
                 m_interrupt_mutex2.Lock();
                 kill=m_kill;
                 if(!m_kill)
@@ -367,94 +398,21 @@ public:
                 m_interrupt_mutex2.Unlock();
                 ResetEvent(m_interrupt_event);
             }
-            else
-            if(result>= WAIT_OBJECT_0 && result- WAIT_OBJECT_0<m_pathnames.GetCount())
-            {
-                //wxMessageBox(_("monitor wait directory change\n"));
-                //wxMessageBox(_("dir event on ")+m_pathnames[result- WAIT_OBJECT_0]);
-                DWORD chda_len;
-                {
-                    //too many changes, tell parent to manually read the directory
-                    //wxMessageBox(_("sending dir event on ")+m_pathnames[result- WAIT_OBJECT_0]);
-                    wxDirectoryMonitorEvent e(m_pathnames[result- WAIT_OBJECT_0],MONITOR_TOO_MANY_CHANGES,wxEmptyString);
-                    m_parent->AddPendingEvent(e);
-                }
-                //wxMessageBox(_("open directory change handle\n"));
-                if(false && ::ReadDirectoryChangesW(m_filehandles[result- WAIT_OBJECT_0], changedata, 4096, m_subtree, DEFAULT_MONITOR_FILTER_WIN32, &chda_len, NULL, NULL))
-                {
-                    //if(chda_len==0)
-                    //    break;
-                    //wxMessageBox(_("reading directory change\n"));
-                    if(false && chda_len>0)
-                    {
-                        int off=0;
-                        PFILE_NOTIFY_INFORMATION chptr=changedata;
-                        do
-                        {
-                            DWORD a=chptr->Action;
-                            //TODO: Convert to the MONITOR_FILE_XXX action types, filtering those that aren't wanted
-                            int action=0;
-                            switch(a)
-                            {
-                                case FILE_ACTION_ADDED:
-                                case FILE_ACTION_RENAMED_NEW_NAME:
-                                    action=MONITOR_FILE_CREATED;
-                                    break;
-                                case FILE_ACTION_REMOVED:
-                                case FILE_ACTION_RENAMED_OLD_NAME:
-                                    action=MONITOR_FILE_DELETED;
-                                    break;
-                                case FILE_ACTION_MODIFIED:
-                                    action=MONITOR_FILE_CHANGED;
-                                    break;
-                            }
-                            if(action&m_notifyfilter)
-                            {
-                                wxString filename(chptr->FileName,chptr->FileNameLength/2); //TODO: check the div by 2
-                                wxDirectoryMonitorEvent e(m_pathnames[result- WAIT_OBJECT_0],action,filename);
-                                m_parent->AddPendingEvent(e);
-                            }
-                            off=chptr->NextEntryOffset;
-                            chptr=(PFILE_NOTIFY_INFORMATION)((char*)chptr+off);
-                        } while(off>0);
-                    }
-                    else
-                    {
-                        //too many changes, tell parent to manually read the directory
-                        //wxMessageBox(_("sending dir event on ")+m_pathnames[result- WAIT_OBJECT_0]);
-                        wxDirectoryMonitorEvent e(m_pathnames[result- WAIT_OBJECT_0],MONITOR_TOO_MANY_CHANGES,wxEmptyString);
-                        m_parent->AddPendingEvent(e);
-                    }
-                }
-//               else {
-//                        wxMessageBox(_T("mon error"));
-//                    //couldn't read changes, tell parent to manually read the directory
-//                    //wxCommandEvent e(wxEVT_NOTIFY_UPDATE_TREE);
-//                    wxDirectoryMonitorEvent e(m_pathnames[result- WAIT_OBJECT_0],MONITOR_TOO_MANY_CHANGES,wxEmptyString);
-//                    m_parent->AddPendingEvent(e);
-//                    //TODO: exit the thread and make a proper error event?
-//                }
-                if(!FindNextChangeNotification(m_handles[result- WAIT_OBJECT_0]))
-                {
-                    wxMessageBox(_("ERROR: Could not set next change notification"));
-                    break;
-                }
-//                if(!handle_fail)
-//                    for(unsigned int i=0;i<m_pathnames.GetCount();i++)
-//                        if(!FindNextChangeNotification(m_handles[i]))
-//                            break;
-            }
             if(m_singleshot)
                 break;
         }
-        delete changedata;
         for(unsigned int i=0;i<m_pathnames.GetCount();i++)
         {
             if(m_handles[i]!=INVALID_HANDLE_VALUE)
-                FindCloseChangeNotification(m_handles[i]);
-            if(m_filehandles[i]!=INVALID_HANDLE_VALUE)
-                ::CloseHandle(m_filehandles[i]);
+            {
+                ::CancelIo(m_handles[i]);
+                ::CloseHandle(m_handles[i]);
+                delete m_changedata[i];
+                delete m_overlapped[i];
+            }
         }
+        delete [] m_changedata;
+        delete [] m_overlapped;
         delete [] m_handles;
         wxMessageBox(_("ERROR: Monitor died"));
 //        wxDirectoryMonitorEvent e(wxEmptyString,MONITOR_FINISHED,wxEmptyString);
@@ -470,6 +428,63 @@ public:
         }
         CloseHandle(m_interrupt_event);
     }
+    void ReadChanges(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered, LPOVERLAPPED lpOverlapped)
+    {
+//        wxMessageBox(wxString::Format(_("%i"),dwErrorCode));
+        //TODO: Error checking - dwErrorCode should be zero, then need to check other error conditions
+        int off=0;
+        unsigned int i=0;
+        for(;i<m_pathnames.GetCount();i++)
+            if(lpOverlapped==m_overlapped[i])
+                break;
+        PFILE_NOTIFY_INFORMATION chptr=m_changedata[i];
+        if(dwNumberOfBytesTransfered>0 && i<m_pathnames.GetCount())
+        do
+        {
+            DWORD a=chptr->Action;
+            //TODO: Convert to the MONITOR_FILE_XXX action types, filtering those that aren't wanted
+            int action=0;
+            switch(a)
+            {
+                case FILE_ACTION_ADDED:
+                case FILE_ACTION_RENAMED_NEW_NAME:
+                    action=MONITOR_FILE_CREATED;
+                    break;
+                case FILE_ACTION_REMOVED:
+                case FILE_ACTION_RENAMED_OLD_NAME:
+                    action=MONITOR_FILE_DELETED;
+                    break;
+                case FILE_ACTION_MODIFIED:
+                    action=MONITOR_FILE_CHANGED;
+                    break;
+            }
+            if(action&m_notifyfilter)
+            {
+                wxString filename(chptr->FileName,chptr->FileNameLength/2); //TODO: check the div by 2
+                wxDirectoryMonitorEvent e(m_pathnames[i],action,filename);
+                m_parent->AddPendingEvent(e);
+            }
+            off=chptr->NextEntryOffset;
+            chptr=(PFILE_NOTIFY_INFORMATION)((char*)chptr+off);
+        } while(off>0);
+        delete m_overlapped[i];
+        m_overlapped[i]=new_overlapped();
+        delete m_changedata[i];
+        m_changedata[i]=(PFILE_NOTIFY_INFORMATION)(new char[4096]);
+        ::ReadDirectoryChangesW(m_handles[i], m_changedata[i], 4096, m_subtree, DEFAULT_MONITOR_FILTER_WIN32, NULL, m_overlapped[i], this->FileIOCompletionRoutine);
+    }
+    static VOID CALLBACK FileIOCompletionRoutine(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered, LPOVERLAPPED lpOverlapped)
+    {
+//        wxMessageBox(_("IO Complete"));
+        if(m.find(lpOverlapped)!=m.end())
+            m[lpOverlapped]->ReadChanges(dwErrorCode, dwNumberOfBytesTransfered, lpOverlapped);
+        else
+        {
+//            wxMessageBox(_("Cleaning up deleted handle"));
+            delete lpOverlapped;
+        }
+    }
+
     HANDLE m_interrupt_event;
     wxMutex m_interrupt_mutex2;
     DWORD m_waittime;
@@ -479,7 +494,9 @@ public:
     wxArrayString m_pathnames;
     wxArrayString m_update_paths;
     DWORD m_notifyfilter;
-    HANDLE *m_handles,*m_filehandles;
+    HANDLE *m_handles;
+    LPOVERLAPPED *m_overlapped;
+    PFILE_NOTIFY_INFORMATION *m_changedata;
     wxEvtHandler *m_parent;
 };
 

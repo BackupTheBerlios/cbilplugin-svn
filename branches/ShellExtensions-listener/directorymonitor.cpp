@@ -467,6 +467,13 @@ public:
             off=chptr->NextEntryOffset;
             chptr=(PFILE_NOTIFY_INFORMATION)((char*)chptr+off);
         } while(off>0);
+        else
+        {
+            //too many changes, tell parent to manually read the directory
+            wxDirectoryMonitorEvent e(m_pathnames[i],MONITOR_TOO_MANY_CHANGES,wxEmptyString);
+            m_parent->AddPendingEvent(e);
+
+        }
         delete m_overlapped[i];
         m_overlapped[i]=new_overlapped();
         delete m_changedata[i];

@@ -715,7 +715,10 @@ void FileExplorer::OnExpand(wxTreeEvent &event)
 
 void FileExplorer::ReadConfig()
 {
+    //IMPORT SETTINGS FROM LEGACY SHELLEXTENSIONS PLUGIN - TODO: REMOVE IN NEXT VERSION
     ConfigManager* cfg = Manager::Get()->GetConfigManager(_T("ShellExtensions"));
+    if(!cfg->Exists(_("FileExplorer/ShowHidenFiles")))
+        cfg = Manager::Get()->GetConfigManager(_T("FileManager"));
     int len=0;
     cfg->Read(_T("FileExplorer/FavRootList/Len"), &len);
     for(int i=0;i<len;i++)
@@ -750,12 +753,16 @@ void FileExplorer::ReadConfig()
     cfg->Read(_T("FileExplorer/ParseSVN"), &m_parse_svn);
     cfg->Read(_T("FileExplorer/ParseHG"), &m_parse_bzr);
     cfg->Read(_T("FileExplorer/ParseBZR"), &m_parse_hg);
-    cfg->Read(_T("FileExplorer/ShowHidenFiles"), &m_show_hidden);
+    cfg->Read(_T("FileExplorer/ShowHiddenFiles"), &m_show_hidden);
 }
 
 void FileExplorer::WriteConfig()
 {
+    //DISCARD SETTINGS FROM LEGACY SHELLEXTENSIONS PLUGIN - TODO: REMOVE IN NEXT VERSION
     ConfigManager* cfg = Manager::Get()->GetConfigManager(_T("ShellExtensions"));
+    if(!cfg->Exists(_("FileExplorer/ShowHidenFiles")))
+        cfg->Delete();
+    cfg = Manager::Get()->GetConfigManager(_T("FileManager"));
     //cfg->Clear();
     int count=static_cast<int>(m_favdirs.GetCount());
     cfg->Write(_T("FileExplorer/FavRootList/Len"), count);
@@ -783,7 +790,7 @@ void FileExplorer::WriteConfig()
     cfg->Write(_T("FileExplorer/ParseSVN"), m_parse_svn);
     cfg->Write(_T("FileExplorer/ParseHG"), m_parse_bzr);
     cfg->Write(_T("FileExplorer/ParseBZR"), m_parse_hg);
-    cfg->Write(_T("FileExplorer/ShowHidenFiles"), m_show_hidden);
+    cfg->Write(_T("FileExplorer/ShowHiddenFiles"), m_show_hidden);
 }
 
 void FileExplorer::OnEnterWild(wxCommandEvent &event)

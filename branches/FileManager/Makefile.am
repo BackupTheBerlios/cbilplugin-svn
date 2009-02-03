@@ -16,9 +16,9 @@ libFileManager_la_SOURCES = FileManager.cpp FileExplorer.cpp FileExplorerSetting
 
 noinst_HEADERS = FileManager.h FileExplorer.h FileExplorerSettings.h FileExplorerUpdater.h directorymonitor.h
 
-EXTRA_DIST = FileManager.cbp FileManager-unix.cbp fileexplorersettings.xrc manifest.xml
+EXTRA_DIST = FileManager.cbp FileManager-unix.cbp Resources/fileexplorersettings.xrc manifest.xml
 
 CLEANFILES = $(pkgdata_DATA)
 
-FileManager.zip: manifest.xml fileexplorersettings.xrc
-	PWD=`pwd` cd $(srcdir) && zip $(PWD)/FileManager.zip manifest.xml *.xrc > /dev/null
+FileManager.zip: manifest.xml Resources/fileexplorersettings.xrc
+	PWD=`pwd` cd $(srcdir) && zip $(PWD)/FileManager.zip manifest.xml Resources/fileexplorersettings.xrc > /dev/null

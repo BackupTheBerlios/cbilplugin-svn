@@ -1,7 +1,11 @@
 #include "FileExplorer.h"
 #include <wx/dir.h>
 #include <wx/filename.h>
+
+#include <sdk.h>
+
 #include <vector>
+
 #include "se_globals.h"
 
 #include <wx/arrimpl.cpp> // this is a magic incantation which must be done!

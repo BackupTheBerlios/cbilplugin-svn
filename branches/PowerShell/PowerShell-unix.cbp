@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<CodeBlocks_project_file>
+	<FileVersion major="1" minor="6" />
+	<Project>
+		<Option title="Power Shell Plugin" />
+		<Option pch_mode="2" />
+		<Option compiler="gcc" />
+		<Build>
+			<Target title="default">
+				<Option output="$(#cb)/devel/share/codeblocks/plugins/libPowerShell.so" prefix_auto="0" extension_auto="0" />
+				<Option working_dir="$(#cb)/devel" />
+				<Option object_output="cbplugin/.objs" />
+				<Option type="3" />
+				<Option compiler="gcc" />
+				<Option parameters="--personality=debug" />
+				<Option host_application="$(#cb)/devel/codeblocks" />
+				<Compiler>
+					<Add option="-Wall" />
+					<Add option="-g" />
+				</Compiler>
+				<ExtraCommands>
+					<Add after="zip -j9 $(#cb)/devel/share/codeblocks/PowerShell.zip manifest.xml" />
+				</ExtraCommands>
+			</Target>
+		</Build>
+		<Compiler>
+			<Add option="-Wall" />
+			<Add option="-g" />
+			<Add option="`wx-config --cflags`" />
+			<Add option="-fmessage-length=0" />
+			<Add option="-fexceptions" />
+			<Add option="-Winvalid-pch" />
+			<Add option="-Ulinux" />
+			<Add option="-Uunix" />
+			<Add option="-fPIC" />
+			<Add option="-DcbDEBUG" />
+			<Add option="-DCB_PRECOMP" />
+			<Add directory="$(#cb)/include" />
+			<Add directory="$(#cb)/include/wxscintilla/include" />
+			<Add directory="$(#cb)/include/wxFlatNotebook/include" />
+		</Compiler>
+		<Linker>
+			<Add option="`wx-config --libs`" />
+			<Add directory="$(#cb)/devel" />
+		</Linker>
+		<Unit filename="CmdConfigDialog.cpp">
+			<Option target="default" />
+			<Option target="se-plugin" />
+			<Option target="detachable" />
+		</Unit>
+		<Unit filename="CmdConfigDialog.h">
+			<Option target="default" />
+			<Option target="se-plugin" />
+			<Option target="detachable" />
+		</Unit>
+		<Unit filename="PipedProcessCtrl.cpp">
+			<Option target="se-plugin" />
+		</Unit>
+		<Unit filename="PipedProcessCtrl.h">
+			<Option target="se-plugin" />
+		</Unit>
+		<Unit filename="Resources/dialogs.fbp">
+			<Option target="default" />
+			<Option target="detachable" />
+		</Unit>
+		<Unit filename="ShellCtrlBase.cpp">
+			<Option target="se-library" />
+		</Unit>
+		<Unit filename="ShellCtrlBase.h">
+			<Option target="se-library" />
+		</Unit>
+		<Unit filename="PowerShell.cpp">
+			<Option target="default" />
+			<Option target="se-plugin" />
+			<Option target="detachable" />
+		</Unit>
+		<Unit filename="PowerShell.h">
+			<Option target="default" />
+			<Option target="se-plugin" />
+			<Option target="detachable" />
+		</Unit>
+		<Unit filename="manifest.xml">
+			<Option target="default" />
+			<Option target="detachable" />
+		</Unit>
+		<Unit filename="se_globals.cpp">
+			<Option target="default" />
+			<Option target="detachable" />
+			<Option target="se-plugin" />
+		</Unit>
+		<Unit filename="se_globals.h">
+			<Option target="default" />
+			<Option target="detachable" />
+			<Option target="se-plugin" />
+		</Unit>
+		<Unit filename="shellproperties.cpp">
+			<Option target="default" />
+			<Option target="se-plugin" />
+			<Option target="detachable" />
+		</Unit>
+		<Unit filename="shellproperties.h">
+			<Option target="default" />
+			<Option target="se-plugin" />
+			<Option target="detachable" />
+		</Unit>
+		<Extensions>
+			<code_completion />
+			<envvars />
+			<wxsmith version="1">
+				<gui name="wxWidgets" src="" main="" init_handlers="necessary" language="CPP" />
+				<resources>
+					<wxPanel wxs="wxsmith/CmdConfigDialog.wxs" src="CmdConfigDialog.cpp" hdr="CmdConfigDialog.h" name="CmdConfigDialog" language="CPP" />
+				</resources>
+			</wxsmith>
+			<debugger />
+		</Extensions>
+	</Project>
+</CodeBlocks_project_file>

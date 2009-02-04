@@ -14,7 +14,7 @@ pluginlib_LTLIBRARIES = libFileManager.la
 
 libFileManager_la_LDFLAGS = -module -version-info 0:1:0 -shared -no-undefined -avoid-version
 
-libFileManager_la_LIBADD = $(PLUGIN_WX_LIBS) ../../../sdk/libcodeblocks.la gnomevfs-2
+libFileManager_la_LIBADD = $(PLUGIN_WX_LIBS) ../../../sdk/libcodeblocks.la /usr/lib/libgnomevfs-2.la
 
 libFileManager_la_SOURCES = FileManager.cpp FileExplorer.cpp FileExplorerSettings.cpp FileExplorerUpdater.cpp directorymonitor.cpp
 

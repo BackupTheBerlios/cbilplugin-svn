@@ -41,6 +41,8 @@
 		</Compiler>
 		<Linker>
 			<Add option="`wx-config --libs`" />
+			<Add library="codeblocks" />
+			<Add library="wxscintilla" />
 			<Add directory="$(#cb)/devel" />
 		</Linker>
 		<Unit filename="CmdConfigDialog.cpp">
@@ -55,19 +57,11 @@
 		</Unit>
 		<Unit filename="PipedProcessCtrl.cpp">
 			<Option target="se-plugin" />
+			<Option target="default" />
 		</Unit>
 		<Unit filename="PipedProcessCtrl.h">
 			<Option target="se-plugin" />
-		</Unit>
-		<Unit filename="Resources/dialogs.fbp">
 			<Option target="default" />
-			<Option target="detachable" />
-		</Unit>
-		<Unit filename="ShellCtrlBase.cpp">
-			<Option target="se-library" />
-		</Unit>
-		<Unit filename="ShellCtrlBase.h">
-			<Option target="se-library" />
 		</Unit>
 		<Unit filename="PowerShell.cpp">
 			<Option target="default" />
@@ -78,6 +72,18 @@
 			<Option target="default" />
 			<Option target="se-plugin" />
 			<Option target="detachable" />
+		</Unit>
+		<Unit filename="Resources/dialogs.fbp">
+			<Option target="default" />
+			<Option target="detachable" />
+		</Unit>
+		<Unit filename="ShellCtrlBase.cpp">
+			<Option target="se-library" />
+			<Option target="default" />
+		</Unit>
+		<Unit filename="ShellCtrlBase.h">
+			<Option target="se-library" />
+			<Option target="default" />
 		</Unit>
 		<Unit filename="manifest.xml">
 			<Option target="default" />

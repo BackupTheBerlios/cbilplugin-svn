@@ -549,7 +549,7 @@ void PowerShell::CreateMenu()
         else
             menu->Append(ID_SubMenu_0+i,menuloc);
     }
-    m_LangMenu->Append(ID_LaunchPythonProcess,_T("Launch Python Interpreter"),_T(""));
+    //m_LangMenu->Append(ID_LaunchPythonProcess,_T("Launch Python Interpreter"),_T(""));
     m_LangMenu->Append(ID_LangMenu_ShowConsole,_T("Toggle Shell Extensions I/O Window"),_T(""),wxITEM_CHECK);
 }
 

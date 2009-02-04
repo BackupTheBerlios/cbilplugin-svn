@@ -38,47 +38,31 @@
 			<Add directory="$(#cb)/include" />
 			<Add directory="$(#cb)/include/wxscintilla/include" />
 			<Add directory="$(#cb)/include/wxFlatNotebook/include" />
+			<Add directory="/usr/include/gnome-vfs-2.0" />
+			<Add directory="/usr/include/glib-2.0" />
+			<Add directory="/usr/lib/glib-2.0/include" />
 		</Compiler>
 		<Linker>
 			<Add option="`wx-config --libs`" />
+			<Add library="codeblocks" />
+			<Add library="wxscintilla" />
+			<Add library="gnomevfs-2" />
 			<Add directory="$(#cb)/devel" />
 		</Linker>
-		<Unit filename="FileExplorer.cpp">
-			<Option target="default" />
-		</Unit>
-		<Unit filename="FileExplorer.h">
-			<Option target="default" />
-		</Unit>
-		<Unit filename="FileExplorerSettings.cpp">
-			<Option target="default" />
-		</Unit>
-		<Unit filename="FileExplorerSettings.h">
-			<Option target="default" />
-		</Unit>
-		<Unit filename="FileExplorerUpdater.cpp">
-			<Option target="default" />
-		</Unit>
-		<Unit filename="FileExplorerUpdater.h">
-			<Option target="default" />
-		</Unit>
-		<Unit filename="Resources/fileexplorersettings.xrc">
-			<Option target="default" />
-		</Unit>
-		<Unit filename="directorymonitor.cpp">
-			<Option target="default" />
-		</Unit>
-		<Unit filename="directorymonitor.h">
-			<Option target="default" />
-		</Unit>
-		<Unit filename="manifest.xml">
-			<Option target="default" />
-		</Unit>
-		<Unit filename="se_globals.cpp">
-			<Option target="default" />
-		</Unit>
-		<Unit filename="se_globals.h">
-			<Option target="default" />
-		</Unit>
+		<Unit filename="FileExplorer.cpp" />
+		<Unit filename="FileExplorer.h" />
+		<Unit filename="FileExplorerSettings.cpp" />
+		<Unit filename="FileExplorerSettings.h" />
+		<Unit filename="FileExplorerUpdater.cpp" />
+		<Unit filename="FileExplorerUpdater.h" />
+		<Unit filename="FileManager.cpp" />
+		<Unit filename="FileManager.h" />
+		<Unit filename="Resources/fileexplorersettings.xrc" />
+		<Unit filename="directorymonitor.cpp" />
+		<Unit filename="directorymonitor.h" />
+		<Unit filename="manifest.xml" />
+		<Unit filename="se_globals.cpp" />
+		<Unit filename="se_globals.h" />
 		<Extensions>
 			<code_completion />
 			<envvars />

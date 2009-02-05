@@ -90,6 +90,51 @@ private:
     wxString m_wildcard;
 };
 
+
+class wxFEDropTarget: public wxDropTarget
+{
+public:
+    wxFEDropTarget(FileExplorer *fe):wxDropTarget()
+    {
+        m_fe=fe;
+    }
+    virtual wxDragResult OnData(wxCoord x, wxCoord y, wxDragResult def)
+    {
+        return def;
+    }
+    virtual bool OnDrop(wxCoord x, wxCoord y, int tab, wxWindow *wnd)
+    {
+        wxMessageBox(_("drop"));
+        wxTreeCtrl *tree=m_fe->m_Tree;
+        int flags;
+        wxTreeItemId id=tree->HitTest(wxPoint(x,y),flags);
+        if(!id.IsOk())
+            return false;
+        if(tree->GetItemImage(id)!=fvsFolder)
+            return false;
+        if(!(flags&(wxTREE_HITTEST_ONITEMICON|wxTREE_HITTEST_ONITEMLABEL)))
+            return false;
+        EditorManager* em = Manager::Get()->GetEditorManager();
+        EditorBase* eb = em->GetActiveEditor();
+        wxFileName curname(eb->GetFilename());
+        wxMessageBox(curname.GetFullName());
+        wxTextEntryDialog te(m_fe,_T("Save as:"),_T("Name:"),curname.GetFullName());
+        if(te.ShowModal()==wxID_CANCEL)
+            return false;
+        wxFileName destpath(m_fe->GetFullPath(id),te.GetValue());
+        eb->SetFilename(destpath.GetFullPath());
+        eb->Save();
+        return true;
+    }
+    virtual wxDragResult OnDragOver(wxCoord x, wxCoord y, wxDragResult def)
+    {
+        return def;
+    }
+    FileExplorer *m_fe;
+};
+
+
+
 BEGIN_EVENT_TABLE(FileTreeCtrl, wxTreeCtrl)
 //    EVT_TREE_ITEM_ACTIVATED(ID_FILETREE, FileTreeCtrl::OnActivate)  //double click -
 END_EVENT_TABLE()
@@ -170,6 +215,7 @@ FileExplorer::FileExplorer(wxWindow *parent,wxWindowID id,
     m_update_expand=false;
     m_dir_monitor=new wxDirectoryMonitor(this,wxArrayString());
     m_dir_monitor->Start();
+    m_droptarget=new wxFEDropTarget(this);
 
     m_show_hidden=false;
     m_parse_cvs=false;
@@ -181,6 +227,7 @@ FileExplorer::FileExplorer(wxWindow *parent,wxWindowID id,
     wxBoxSizer* bshloc = new wxBoxSizer(wxHORIZONTAL);
     m_Tree = new FileTreeCtrl(this, ID_FILETREE);
     m_Tree->SetIndent(m_Tree->GetIndent()/2);
+    m_Tree->SetDropTarget(new wxFNBDropTarget<FileExplorer>(this, &FileExplorer::OnDropFlatNotebook));
     m_Loc = new wxComboBox(this,ID_FILELOC,_T(""),wxDefaultPosition,wxDefaultSize,0,NULL,wxTE_PROCESS_ENTER|wxCB_DROPDOWN);
     m_WildCards = new wxComboBox(this,ID_FILEWILD,_T(""),wxDefaultPosition,wxDefaultSize,0,NULL,wxTE_PROCESS_ENTER|wxCB_DROPDOWN);
     m_UpButton = new wxButton(this,ID_FILE_UPBUTTON,_("^"),wxDefaultPosition,wxDefaultSize,wxBU_EXACTFIT);
@@ -1691,4 +1738,32 @@ bool FileExplorer::ParseCVSstate(const wxString &path, VCSstatearray &sa)
 void FileExplorer::OnExecRequest(wxCommandEvent &event)
 {
     m_updater->ExecMain();
+}
+
+
+wxDragResult FileExplorer::OnDropFlatNotebook(wxCoord x, wxCoord y, int tab, wxWindow *wnd)
+{
+    //wxMessageBox(_("drop"));
+    wxTreeCtrl *tree=m_Tree;
+    int flags;
+    wxTreeItemId id=tree->HitTest(wxPoint(x,y),flags);
+    if(!id.IsOk())
+        return wxDragNone;
+    if(tree->GetItemImage(id)!=fvsFolder)
+        return wxDragNone;
+    if(!(flags&(wxTREE_HITTEST_ONITEMICON|wxTREE_HITTEST_ONITEMLABEL)))
+        return wxDragNone;
+    EditorManager* em = Manager::Get()->GetEditorManager();
+    EditorBase* eb = em->GetActiveEditor();
+    if(!eb)
+        return wxDragNone;
+    wxFileName curname(eb->GetFilename());
+//    wxMessageBox(eb->GetFilename());
+    //wxTextEntryDialog te(this,_T("Save as:"),_T("Name:"),curname.GetFullName());
+//    if(te.ShowModal()==wxID_CANCEL)
+//        return wxDragNone;
+    wxFileName destpath(GetFullPath(id),curname.GetFullName());
+    eb->SetFilename(destpath.GetFullPath());
+    eb->SaveAs();
+    return wxDragCopy;
 }

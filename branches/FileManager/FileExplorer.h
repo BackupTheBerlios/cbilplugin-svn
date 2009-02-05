@@ -6,6 +6,9 @@
 #include <wx/combobox.h>
 #include <wx/dynarray.h>
 
+#include <wx/wxFlatNotebook/wxFNBDropTarget.h>
+
+
 #include <vector>
 #include "FileExplorerSettings.h"
 #include "FileExplorerUpdater.h"
@@ -35,6 +38,9 @@ public:
     ExpList children;
 };
 
+class wxFEDropTarget;
+
+
 class FileTreeCtrl: public wxTreeCtrl
 {
 public: //wxTR_HIDE_ROOT|
@@ -56,6 +62,7 @@ protected:
 class FileExplorer: public wxPanel
 {
     friend class FileExplorerUpdater;
+    friend class wxFEDropTarget;
 public:
     FileExplorer(wxWindow *parent,wxWindowID id = wxID_ANY,
         const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize,
@@ -94,6 +101,9 @@ private:
     void OnRefresh(wxCommandEvent &event);
     void OnBeginDragTreeItem(wxTreeEvent &event);
     void OnEndDragTreeItem(wxTreeEvent &event);
+
+    virtual wxDragResult OnDropFlatNotebook(wxCoord x, wxCoord y, int tab, wxWindow *wnd);
+
     void OnAddToProject(wxCommandEvent &event);
 
     // Events related to updating the Tree
@@ -146,6 +156,7 @@ private:
     bool m_update_active;
     UpdateQueue *m_update_queue;
     wxDirectoryMonitor *m_dir_monitor;
+    wxFEDropTarget *m_droptarget;
 
     int m_ticount; //number of selections
     wxString m_dragtest;

@@ -12,8 +12,7 @@
 				<Option object_output="..\..\..\.objs\plugins\contrib\FileManager" />
 				<Option type="3" />
 				<Option compiler="gcc" />
-				<Option parameters="--personality=debug" />
-				<Option host_application="codeblocks.exe" />
+				<Option host_application="$(#cb)\devel\codeblocks.exe" />
 				<Compiler>
 					<Add option="-g" />
 					<Add option="-pipe" />

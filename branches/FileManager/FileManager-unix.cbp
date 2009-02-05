@@ -27,6 +27,7 @@
 			<Add option="-Wall" />
 			<Add option="-g" />
 			<Add option="`wx-config --cflags`" />
+			<Add option="`pkg-config --cflags gnome-vfs-2.0`" />
 			<Add option="-fmessage-length=0" />
 			<Add option="-fexceptions" />
 			<Add option="-Winvalid-pch" />
@@ -38,15 +39,12 @@
 			<Add directory="$(#cb)/include" />
 			<Add directory="$(#cb)/include/wxscintilla/include" />
 			<Add directory="$(#cb)/include/wxFlatNotebook/include" />
-			<Add directory="/usr/include/gnome-vfs-2.0" />
-			<Add directory="/usr/include/glib-2.0" />
-			<Add directory="/usr/lib/glib-2.0/include" />
 		</Compiler>
 		<Linker>
 			<Add option="`wx-config --libs`" />
+			<Add option="`pkg-config --libs gnome-vfs-2.0`" />
 			<Add library="codeblocks" />
 			<Add library="wxscintilla" />
-			<Add library="gnomevfs-2" />
 			<Add directory="$(#cb)/devel" />
 		</Linker>
 		<Unit filename="FileExplorer.cpp" />

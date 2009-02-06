@@ -65,7 +65,7 @@ bool CommandCollection::ExportConfig(const wxString &filename)
     wxFile file(filename, wxFile::write);
     if(!file.IsOpened())
         return false;
-    file.Write(_T("##Shell Extensions Plugin (v0.2) Command Export##\n"));
+    file.Write(_T("##Power Shell Plugin (v0.5) Command Export##\n"));
     int len=interps.GetCount();
     for(int i=0;i<len;i++)
     {

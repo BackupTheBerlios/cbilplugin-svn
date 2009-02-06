@@ -266,7 +266,7 @@ void PowerShell::OnRunTarget(wxCommandEvent& event)
             OnSetTarget(event);
             if(!wxFileName::FileExists(m_RunTarget))
             {
-                LogMessage(_("PowerShell: ")+m_RunTarget+_(" not found"));
+                LogMessage(_("Power Shell plugin: ")+m_RunTarget+_(" not found"));
                 return;
             }
         }
@@ -275,7 +275,7 @@ void PowerShell::OnRunTarget(wxCommandEvent& event)
             OnSetDirTarget(event);
             if(!wxFileName::DirExists(m_RunTarget))
             {
-                LogMessage(_("Shell Extensions: ")+m_RunTarget+_(" not found"));
+                LogMessage(_("Power Shell plugin: ")+m_RunTarget+_(" not found"));
                 return;
             }
             if(m_RunTarget==_T(""))
@@ -290,7 +290,7 @@ void PowerShell::OnRunTarget(wxCommandEvent& event)
     }
     else
     {
-        LogMessage(wxString::Format(_T("WARNING: Unprocessed ShellCommand Menu Message: ID %i, IDbase %i, IDend %i, num items on menu %i"),ID,ID_ContextMenu_0,ID_ContextMenu_49,(int)m_contextvec.size()));
+        LogMessage(wxString::Format(_T("WARNING: Unprocessed Power Shell Menu Message: ID %i, IDbase %i, IDend %i, num items on menu %i"),ID,ID_ContextMenu_0,ID_ContextMenu_49,(int)m_contextvec.size()));
         return;
     }
 
@@ -350,7 +350,7 @@ void PowerShell::OnRunTarget(wxCommandEvent& event)
     {
         if(!wxSetWorkingDirectory(workingdir))
         {
-            LogMessage(_T("Shell Extensions Plugin: Can't change to working directory to ")+workingdir);
+            LogMessage(_T("Power Shell Plugin: Can't change to working directory to ")+workingdir);
             return;
         }
     }
@@ -550,7 +550,7 @@ void PowerShell::CreateMenu()
             menu->Append(ID_SubMenu_0+i,menuloc);
     }
     //m_LangMenu->Append(ID_LaunchPythonProcess,_T("Launch Python Interpreter"),_T(""));
-    m_LangMenu->Append(ID_LangMenu_ShowConsole,_T("Toggle Shell Extensions I/O Window"),_T(""),wxITEM_CHECK);
+    m_LangMenu->Append(ID_LangMenu_ShowConsole,_T("Toggle Power Shell I/O Window"),_T(""),wxITEM_CHECK);
 }
 
 void PowerShell::AddModuleMenuEntry(wxMenu *modmenu,int entrynum, int idref)

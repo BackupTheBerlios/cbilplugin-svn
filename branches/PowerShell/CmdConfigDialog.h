@@ -62,7 +62,7 @@ class CmdConfigDialog : public cbConfigurationPanel
 		CmdConfigDialog( wxWindow* parent, PowerShell* plugin);
         virtual ~CmdConfigDialog() {}
 
-        virtual wxString GetTitle() const { return _("Shell Extensions"); }
+        virtual wxString GetTitle() const { return _("Power Shell"); }
         virtual wxString GetBitmapBaseName() const { return _T("batch"); }
         virtual void OnApply();
         virtual void OnCancel(){}

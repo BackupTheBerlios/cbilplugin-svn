@@ -12,7 +12,7 @@
 				<Option object_output="$(#cb)\.objs\plugins\contrib\PowerShell" />
 				<Option type="3" />
 				<Option compiler="gcc" />
-				<Option parameters="--personality=debug" />
+				<Option parameters="--personality=debug -nd" />
 				<Option host_application="codeblocks.exe" />
 				<Compiler>
 					<Add option="-g" />

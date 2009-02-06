@@ -1757,13 +1757,16 @@ wxDragResult FileExplorer::OnDropFlatNotebook(wxCoord x, wxCoord y, int tab, wxW
     EditorBase* eb = em->GetActiveEditor();
     if(!eb)
         return wxDragNone;
-    wxFileName curname(eb->GetFilename());
+    wxString curname_s=eb->GetFilename();
+    wxFileName curname(curname_s);
 //    wxMessageBox(eb->GetFilename());
     //wxTextEntryDialog te(this,_T("Save as:"),_T("Name:"),curname.GetFullName());
 //    if(te.ShowModal()==wxID_CANCEL)
 //        return wxDragNone;
     wxFileName destpath(GetFullPath(id),curname.GetFullName());
     eb->SetFilename(destpath.GetFullPath());
-    eb->SaveAs();
-    return wxDragCopy;
+    if(eb->SaveAs())
+        return wxDragCopy;
+    eb->SetFilename(curname_s);
+    return wxDragCancel;
 }

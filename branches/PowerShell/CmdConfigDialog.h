@@ -63,7 +63,7 @@ class CmdConfigDialog : public cbConfigurationPanel
         virtual ~CmdConfigDialog() {}
 
         virtual wxString GetTitle() const { return _("Power Shell"); }
-        virtual wxString GetBitmapBaseName() const { return _T("batch"); }
+        virtual wxString GetBitmapBaseName() const { return _T("PowerShell"); }
         virtual void OnApply();
         virtual void OnCancel(){}
 

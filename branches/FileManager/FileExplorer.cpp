@@ -1764,9 +1764,8 @@ wxDragResult FileExplorer::OnDropFlatNotebook(wxCoord x, wxCoord y, int tab, wxW
 //    if(te.ShowModal()==wxID_CANCEL)
 //        return wxDragNone;
     wxFileName destpath(GetFullPath(id),curname.GetFullName());
-    eb->SetFilename(destpath.GetFullPath());
-    if(eb->SaveAs())
+//    if(eb->SaveAs(destpath.GetPath(),destpath.GetName()))
+    if(eb->SaveAs()) //TODO: This code does nothing, the line about requires a patch to cbEditor::SaveAs
         return wxDragCopy;
-    eb->SetFilename(curname_s);
     return wxDragCancel;
 }

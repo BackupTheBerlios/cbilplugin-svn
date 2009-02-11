@@ -7,22 +7,25 @@
 		<Option compiler="gcc" />
 		<Build>
 			<Target title="default">
-				<Option output="$(#cb)/devel/share/codeblocks/plugins/libFileManager.so" prefix_auto="0" extension_auto="0" />
-				<Option working_dir="$(#cb)/devel" />
-				<Option object_output="$(#cb)/.objs/plugins/contrib/FileManager" />
+				<Option output="../../../devel/share/codeblocks/plugins/libFileManager.so" prefix_auto="0" extension_auto="0" />
+				<Option working_dir="../../../devel" />
+				<Option object_output="../../../.objs/plugins/contrib/FileManager" />
 				<Option type="3" />
 				<Option compiler="gcc" />
 				<Option parameters="--personality=debug" />
-				<Option host_application="$(#cb)/devel/codeblocks" />
+				<Option host_application="../../../devel/codeblocks" />
 				<Compiler>
 					<Add option="-Wall" />
 					<Add option="-g" />
 				</Compiler>
 				<ExtraCommands>
-					<Add after="zip -j9 $(#cb)/devel/share/codeblocks/FileManager.zip manifest.xml Resources/fileexplorersettings.xrc" />
+					<Add after="zip -j9 ../../../devel/share/codeblocks/FileManager.zip manifest.xml Resources/fileexplorersettings.xrc" />
 				</ExtraCommands>
 			</Target>
 		</Build>
+		<VirtualTargets>
+			<Add alias="All" targets="default;" />
+		</VirtualTargets>
 		<Compiler>
 			<Add option="-Wall" />
 			<Add option="-g" />
@@ -36,16 +39,16 @@
 			<Add option="-fPIC" />
 			<Add option="-DcbDEBUG" />
 			<Add option="-DCB_PRECOMP" />
-			<Add directory="$(#cb)/include" />
-			<Add directory="$(#cb)/include/wxscintilla/include" />
-			<Add directory="$(#cb)/include/wxFlatNotebook/include" />
+			<Add directory="../../../include" />
+			<Add directory="../../../include/wxscintilla/include" />
+			<Add directory="../../../include/wxFlatNotebook/include" />
 		</Compiler>
 		<Linker>
 			<Add option="`wx-config --libs`" />
 			<Add option="`pkg-config --libs gnome-vfs-2.0`" />
 			<Add library="codeblocks" />
 			<Add library="wxscintilla" />
-			<Add directory="$(#cb)/devel" />
+			<Add directory="../../../devel" />
 		</Linker>
 		<Unit filename="FileExplorer.cpp" />
 		<Unit filename="FileExplorer.h" />

@@ -808,7 +808,7 @@ void FileExplorer::WriteConfig()
     //DISCARD SETTINGS FROM LEGACY SHELLEXTENSIONS PLUGIN - TODO: REMOVE IN NEXT VERSION
     ConfigManager* cfg = Manager::Get()->GetConfigManager(_T("ShellExtensions"));
     if(!cfg->Exists(_("FileExplorer/ShowHidenFiles")))
-        cfg->Delete();
+        cfg->DeleteSubPath(_("FileExplorer/ShowHidenFiles"));
     cfg = Manager::Get()->GetConfigManager(_T("FileManager"));
     //cfg->Clear();
     int count=static_cast<int>(m_favdirs.GetCount());

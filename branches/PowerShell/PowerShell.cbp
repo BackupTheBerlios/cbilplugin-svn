@@ -7,9 +7,9 @@
 		<Option compiler="gcc" />
 		<Build>
 			<Target title="default">
-				<Option output="$(#cb)\devel\share\codeblocks\plugins\PowerShell" prefix_auto="1" extension_auto="1" />
-				<Option working_dir="$(#cb)\devel" />
-				<Option object_output="$(#cb)\.objs\plugins\contrib\PowerShell" />
+				<Option output="..\..\..\devel\share\codeblocks\plugins\PowerShell" prefix_auto="1" extension_auto="1" />
+				<Option working_dir="..\..\..\devel" />
+				<Option object_output="..\..\..\.objs\plugins\contrib\PowerShell" />
 				<Option type="3" />
 				<Option compiler="gcc" />
 				<Option parameters="--personality=debug -nd" />
@@ -29,20 +29,20 @@
 					<Add option="-DCB_PRECOMP" />
 					<Add option="-DWX_PRECOMP" />
 					<Add option="-DwxUSE_UNICODE" />
-					<Add directory="$(#cb.include)" />
-					<Add directory="$(#cb.include)\wxscintilla\include" />
-					<Add directory="$(#cb.include)\wxFlatNotebook\include" />
+					<Add directory="..\..\..\include" />
+					<Add directory="..\..\..\include\wxscintilla\include" />
+					<Add directory="..\..\..\include\wxFlatNotebook\include" />
 					<Add directory="$(#wx.include)" />
 					<Add directory="$(#wx.lib)\gcc_dll$(WX_CFG)\msw$(WX_SUFFIX)" />
 				</Compiler>
 				<Linker>
 					<Add library="codeblocks" />
 					<Add library="wxmsw28$(WX_SUFFIX)" />
-					<Add directory="$(#cb)\devel" />
+					<Add directory="..\..\..\devel" />
 					<Add directory="$(#wx.lib)\gcc_dll$(WX_CFG)" />
 				</Linker>
 				<ExtraCommands>
-					<Add after="zip -j9 $(#cb)\devel\share\codeblocks\PowerShell.zip manifest.xml" />
+					<Add after="zip -j9 ..\..\..\devel\share\codeblocks\PowerShell.zip manifest.xml" />
 				</ExtraCommands>
 				<Environment>
 					<Variable name="WX_SUFFIX" value="u" />
@@ -50,6 +50,9 @@
 				</Environment>
 			</Target>
 		</Build>
+		<VirtualTargets>
+			<Add alias="All" targets="default;" />
+		</VirtualTargets>
 		<Compiler>
 			<Add option="-Wall" />
 		</Compiler>

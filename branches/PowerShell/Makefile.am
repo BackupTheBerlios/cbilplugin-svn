@@ -21,5 +21,5 @@ EXTRA_DIST = PowerShell.cbp PowerShell-unix.cbp
 CLEANFILES = $(pkgdata_DATA)
 
 PowerShell.zip: manifest.xml
-	PWD=`pwd` cd $(srcdir) && zip $(PWD)/PowerShell.zip manifest.xml > /dev/null
+	PWD=`pwd` cd $(srcdir) && zip -j9 $(PWD)/PowerShell.zip manifest.xml > /dev/null
 

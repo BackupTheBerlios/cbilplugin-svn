@@ -263,7 +263,18 @@ void PowerShell::OnRunTarget(wxCommandEvent& event)
         if(m_ic.interps[m_interpnum].command.Find(_T("$file"))>0 ||
             m_ic.interps[m_interpnum].command.Find(_T("$path"))>0)
         {
-            OnSetTarget(event);
+            m_RunTarget=wxEmptyString;
+            EditorManager* edMan = Manager::Get()->GetEditorManager();
+            if(edMan)
+            {
+                wxFileName activefile(edMan->GetActiveEditor()->GetFilename());
+                wxString filename=activefile.GetFullPath();
+                wxString name=activefile.GetFullName();
+                if(WildCardListMatch(m_ic.interps[m_interpnum].wildcards,name))
+                    m_RunTarget=filename;
+            }
+            if(m_RunTarget==wxEmptyString)
+                OnSetTarget(event);
             if(!wxFileName::FileExists(m_RunTarget))
             {
                 LogMessage(_("Power Shell plugin: ")+m_RunTarget+_(" not found"));

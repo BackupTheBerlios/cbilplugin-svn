@@ -91,45 +91,66 @@ private:
 };
 
 
+class FEDataObject:public wxDataObjectComposite
+{
+public:
+   FEDataObject()
+   {
+       Add(new wxFileDataObject,true);
+       Add(new wxFNBDragInfoDataObject(_("wxFNB")));
+   }
+};
+
+
 class wxFEDropTarget: public wxDropTarget
 {
 public:
     wxFEDropTarget(FileExplorer *fe):wxDropTarget()
     {
         m_fe=fe;
+        m_data_object=new FEDataObject();
+        SetDataObject(m_data_object);
     }
     virtual wxDragResult OnData(wxCoord x, wxCoord y, wxDragResult def)
     {
-        return def;
+        GetData();
+        if(m_data_object->GetReceivedFormat().GetId()==_("wxFNB"))
+        {
+            wxTreeCtrl *tree=m_fe->m_Tree;
+            int flags;
+            wxTreeItemId id=tree->HitTest(wxPoint(x,y),flags);
+            if(!id.IsOk())
+                return wxDragCancel;
+            if(tree->GetItemImage(id)!=fvsFolder)
+                return wxDragCancel;
+            if(!(flags&(wxTREE_HITTEST_ONITEMICON|wxTREE_HITTEST_ONITEMLABEL)))
+                return wxDragCancel;
+            EditorManager* em = Manager::Get()->GetEditorManager();
+            EditorBase* eb = em->GetActiveEditor();
+            wxFileName curname(eb->GetFilename());
+            wxTextEntryDialog te(m_fe,_T("Save as:"),_T("Name:"),curname.GetFullName());
+            if(te.ShowModal()==wxID_CANCEL)
+                return wxDragCancel;
+            wxFileName destpath(m_fe->GetFullPath(id),te.GetValue());
+            eb->SetFilename(destpath.GetFullPath());
+            eb->Save();
+            return def;
+        }
+        else if(m_data_object->GetReceivedFormat()==wxDF_FILENAME )
+        {
+
+        }
     }
     virtual bool OnDrop(wxCoord x, wxCoord y, int tab, wxWindow *wnd)
     {
-        wxMessageBox(_("drop"));
-        wxTreeCtrl *tree=m_fe->m_Tree;
-        int flags;
-        wxTreeItemId id=tree->HitTest(wxPoint(x,y),flags);
-        if(!id.IsOk())
-            return false;
-        if(tree->GetItemImage(id)!=fvsFolder)
-            return false;
-        if(!(flags&(wxTREE_HITTEST_ONITEMICON|wxTREE_HITTEST_ONITEMLABEL)))
-            return false;
-        EditorManager* em = Manager::Get()->GetEditorManager();
-        EditorBase* eb = em->GetActiveEditor();
-        wxFileName curname(eb->GetFilename());
-        wxMessageBox(curname.GetFullName());
-        wxTextEntryDialog te(m_fe,_T("Save as:"),_T("Name:"),curname.GetFullName());
-        if(te.ShowModal()==wxID_CANCEL)
-            return false;
-        wxFileName destpath(m_fe->GetFullPath(id),te.GetValue());
-        eb->SetFilename(destpath.GetFullPath());
-        eb->Save();
         return true;
     }
     virtual wxDragResult OnDragOver(wxCoord x, wxCoord y, wxDragResult def)
     {
         return def;
     }
+private:
+    FEDataObject *m_data_object;
     FileExplorer *m_fe;
 };
 
@@ -807,8 +828,8 @@ void FileExplorer::WriteConfig()
 {
     //DISCARD SETTINGS FROM LEGACY SHELLEXTENSIONS PLUGIN - TODO: REMOVE IN NEXT VERSION
     ConfigManager* cfg = Manager::Get()->GetConfigManager(_T("ShellExtensions"));
-    if(!cfg->Exists(_("FileExplorer/ShowHidenFiles")))
-        cfg->DeleteSubPath(_("FileExplorer/ShowHidenFiles"));
+    if(cfg->Exists(_("FileExplorer/ShowHidenFiles")))
+        cfg->DeleteSubPath(_("FileExplorer"));
     cfg = Manager::Get()->GetConfigManager(_T("FileManager"));
     //cfg->Clear();
     int count=static_cast<int>(m_favdirs.GetCount());

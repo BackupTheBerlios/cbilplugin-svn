@@ -2,6 +2,10 @@
 #include <wx/dir.h>
 #include <wx/filename.h>
 
+#include <wx/wxFlatNotebook/wxFNBDropTarget.h>
+#include <wx/wxFlatNotebook/wxFlatNotebook.h>
+
+
 #include <sdk.h>
 
 #include <vector>
@@ -116,6 +120,10 @@ public:
         GetData();
         if(m_data_object->GetReceivedFormat().GetId()==_("wxFNB"))
         {
+            wxFNBDragInfo data;
+            m_data_object->GetDataHere(_("wxFNB"),&data);
+            wxFlatNotebook *fnb=(wxFlatNotebook*)(data.GetContainer()->GetParent());
+            //wxWindow *wnd=((wxFNBDragInfoDataObject*)m_data_object)->GetData()->GetContainer();
             wxTreeCtrl *tree=m_fe->m_Tree;
             int flags;
             wxTreeItemId id=tree->HitTest(wxPoint(x,y),flags);
@@ -127,18 +135,38 @@ public:
                 return wxDragCancel;
             EditorManager* em = Manager::Get()->GetEditorManager();
             EditorBase* eb = em->GetActiveEditor();
-            wxFileName curname(eb->GetFilename());
-            wxTextEntryDialog te(m_fe,_T("Save as:"),_T("Name:"),curname.GetFullName());
-            if(te.ShowModal()==wxID_CANCEL)
+            if(eb!=fnb->GetPage(data.GetPageIndex()))
+            {
+                LogMessage(wxString::Format(_("FileExplorer: Dropped page not the active editor. Ed %i, Tab %i"),eb,fnb));
                 return wxDragCancel;
-            wxFileName destpath(m_fe->GetFullPath(id),te.GetValue());
-            eb->SetFilename(destpath.GetFullPath());
-            eb->Save();
+            }
+            wxFileName curname(eb->GetFilename());
+            wxFileName destpath(m_fe->GetFullPath(id),curname.GetFullName());
+            if(eb->SaveAs(destpath.GetPath(),destpath.GetName()))
+            //if(eb->SaveAs()) //TODO: This code does nothing, the line about requires a patch to cbEditor::SaveAs
+                return wxDragCopy;
             return def;
         }
-        else if(m_data_object->GetReceivedFormat()==wxDF_FILENAME )
+        else if(m_data_object->GetReceivedFormat().GetType()==wxDF_FILENAME )
         {
-
+//            wxFileDataObject data;
+////            if(sizeof(wxFileDataObject)!=m_data_object->GetDataSize(wxDF_FILENAME))
+////            {
+////                wxMessageBox(wxString::Format(_("Drop files %i,%i"),sizeof(wxFileDataObject),m_data_object->GetDataSize(wxDF_FILENAME)));
+////                return wxDragCancel;
+////            }
+//            if(!m_data_object->GetDataHere(wxDataFormat(wxDF_FILENAME),&data))
+//                return wxDragCancel;
+//            wxMessageBox(wxString::Format(_("Drop files %i"),&data));
+//            wxArrayString as=data.GetFilenames();
+//            wxString files;
+//            for(int i=0;i<as.GetCount();i++)
+//                files+=as[i]+_("\n");
+//            if(as.GetCount()==0)
+//                LogMessage(_("FileExplorer: Drop files none"));
+//            else
+//                wxMessageBox(_("FileExplorer: Drop files")+files);
+            return wxDragCancel;
         }
     }
     virtual bool OnDrop(wxCoord x, wxCoord y, int tab, wxWindow *wnd)
@@ -248,7 +276,8 @@ FileExplorer::FileExplorer(wxWindow *parent,wxWindowID id,
     wxBoxSizer* bshloc = new wxBoxSizer(wxHORIZONTAL);
     m_Tree = new FileTreeCtrl(this, ID_FILETREE);
     m_Tree->SetIndent(m_Tree->GetIndent()/2);
-    m_Tree->SetDropTarget(new wxFNBDropTarget<FileExplorer>(this, &FileExplorer::OnDropFlatNotebook));
+    m_Tree->SetDropTarget(m_droptarget);
+    //new wxFNBDropTarget<FileExplorer>(this, &FileExplorer::OnDropFlatNotebook));
     m_Loc = new wxComboBox(this,ID_FILELOC,_T(""),wxDefaultPosition,wxDefaultSize,0,NULL,wxTE_PROCESS_ENTER|wxCB_DROPDOWN);
     m_WildCards = new wxComboBox(this,ID_FILEWILD,_T(""),wxDefaultPosition,wxDefaultSize,0,NULL,wxTE_PROCESS_ENTER|wxCB_DROPDOWN);
     m_UpButton = new wxButton(this,ID_FILE_UPBUTTON,_("^"),wxDefaultPosition,wxDefaultSize,wxBU_EXACTFIT);
@@ -1762,31 +1791,31 @@ void FileExplorer::OnExecRequest(wxCommandEvent &event)
 }
 
 
-wxDragResult FileExplorer::OnDropFlatNotebook(wxCoord x, wxCoord y, int tab, wxWindow *wnd)
-{
-    //wxMessageBox(_("drop"));
-    wxTreeCtrl *tree=m_Tree;
-    int flags;
-    wxTreeItemId id=tree->HitTest(wxPoint(x,y),flags);
-    if(!id.IsOk())
-        return wxDragNone;
-    if(tree->GetItemImage(id)!=fvsFolder)
-        return wxDragNone;
-    if(!(flags&(wxTREE_HITTEST_ONITEMICON|wxTREE_HITTEST_ONITEMLABEL)))
-        return wxDragNone;
-    EditorManager* em = Manager::Get()->GetEditorManager();
-    EditorBase* eb = em->GetActiveEditor();
-    if(!eb)
-        return wxDragNone;
-    wxString curname_s=eb->GetFilename();
-    wxFileName curname(curname_s);
-//    wxMessageBox(eb->GetFilename());
-    //wxTextEntryDialog te(this,_T("Save as:"),_T("Name:"),curname.GetFullName());
-//    if(te.ShowModal()==wxID_CANCEL)
+//wxDragResult FileExplorer::OnDropFlatNotebook(wxCoord x, wxCoord y, int tab, wxWindow *wnd)
+//{
+//    //wxMessageBox(_("drop"));
+//    wxTreeCtrl *tree=m_Tree;
+//    int flags;
+//    wxTreeItemId id=tree->HitTest(wxPoint(x,y),flags);
+//    if(!id.IsOk())
 //        return wxDragNone;
-    wxFileName destpath(GetFullPath(id),curname.GetFullName());
-//    if(eb->SaveAs(destpath.GetPath(),destpath.GetName()))
-    if(eb->SaveAs()) //TODO: This code does nothing, the line about requires a patch to cbEditor::SaveAs
-        return wxDragCopy;
-    return wxDragCancel;
-}
+//    if(tree->GetItemImage(id)!=fvsFolder)
+//        return wxDragNone;
+//    if(!(flags&(wxTREE_HITTEST_ONITEMICON|wxTREE_HITTEST_ONITEMLABEL)))
+//        return wxDragNone;
+//    EditorManager* em = Manager::Get()->GetEditorManager();
+//    EditorBase* eb = em->GetActiveEditor();
+//    if(!eb)
+//        return wxDragNone;
+//    wxString curname_s=eb->GetFilename();
+//    wxFileName curname(curname_s);
+////    wxMessageBox(eb->GetFilename());
+//    //wxTextEntryDialog te(this,_T("Save as:"),_T("Name:"),curname.GetFullName());
+////    if(te.ShowModal()==wxID_CANCEL)
+////        return wxDragNone;
+//    wxFileName destpath(GetFullPath(id),curname.GetFullName());
+////    if(eb->SaveAs(destpath.GetPath(),destpath.GetName()))
+//    if(eb->SaveAs()) //TODO: This code does nothing, the line about requires a patch to cbEditor::SaveAs
+//        return wxDragCopy;
+//    return wxDragCancel;
+//}

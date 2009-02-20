@@ -6,7 +6,6 @@
 #include <wx/combobox.h>
 #include <wx/dynarray.h>
 
-#include <wx/wxFlatNotebook/wxFNBDropTarget.h>
 
 
 #include <vector>
@@ -102,7 +101,7 @@ private:
     void OnBeginDragTreeItem(wxTreeEvent &event);
     void OnEndDragTreeItem(wxTreeEvent &event);
 
-    virtual wxDragResult OnDropFlatNotebook(wxCoord x, wxCoord y, int tab, wxWindow *wnd);
+//    virtual wxDragResult OnDropFlatNotebook(wxCoord x, wxCoord y, int tab, wxWindow *wnd);
 
     void OnAddToProject(wxCommandEvent &event);
 

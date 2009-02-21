@@ -101,8 +101,6 @@ private:
     void OnBeginDragTreeItem(wxTreeEvent &event);
     void OnEndDragTreeItem(wxTreeEvent &event);
 
-//    virtual wxDragResult OnDropFlatNotebook(wxCoord x, wxCoord y, int tab, wxWindow *wnd);
-
     void OnAddToProject(wxCommandEvent &event);
 
     // Events related to updating the Tree

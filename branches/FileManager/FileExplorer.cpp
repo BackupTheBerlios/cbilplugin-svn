@@ -162,17 +162,29 @@ public:
             return def;
         }
         else
-        #endif CB_AUI
+        #endif
         if(m_data_object->GetReceivedFormat().GetType()==wxDF_FILENAME )
         {
             wxArrayString as=m_data_object->m_file->GetFilenames();
-            wxString files;
-            for(int i=0;i<as.GetCount();i++)
-                files+=as[i]+_("\n");
-            if(as.GetCount()==0)
-                LogMessage(_("FileExplorer: No Droped files"));
-            else
-                LogMessage(_("FileExplorer: Drop files ")+files);
+            wxTreeCtrl *tree=m_fe->m_Tree;
+            int flags;
+            wxTreeItemId id=tree->HitTest(wxPoint(x,y),flags);
+            if(!id.IsOk())
+                return wxDragCancel;
+            if(tree->GetItemImage(id)!=fvsFolder)
+                return wxDragCancel;
+            if(!(flags&(wxTREE_HITTEST_ONITEMICON|wxTREE_HITTEST_ONITEMLABEL)))
+                return wxDragCancel;
+            if(def==wxDragCopy)
+            {
+                m_fe->CopyFiles(m_fe->GetFullPath(id),as);
+                return def;
+            }
+            if(def==wxDragMove)
+            {
+                m_fe->MoveFiles(m_fe->GetFullPath(id),as);
+                return def;
+            }
             return wxDragCancel;
         }
 //            if(sizeof(wxFileDataObject)!=m_data_object->GetDataSize(wxDF_FILENAME))
@@ -180,6 +192,7 @@ public:
 //                wxMessageBox(wxString::Format(_("Drop files %i,%i"),sizeof(wxFileDataObject),m_data_object->GetDataSize(wxDF_FILENAME)));
 //                return wxDragCancel;
 //            }
+        return wxDragCancel;
     }
     virtual bool OnDrop(wxCoord x, wxCoord y, int tab, wxWindow *wnd)
     {
@@ -1259,17 +1272,14 @@ void FileExplorer::OnDuplicate(wxCommandEvent &event)
     //TODO: Reselect item in new location?? (what it outside root scope?)
 }
 
-void FileExplorer::OnCopy(wxCommandEvent &event)
+
+void FileExplorer::CopyFiles(const wxString &destination, const wxArrayString &selectedfiles)
 {
-    wxDirDialog dd(this,_T("Copy to"));
-    dd.SetPath(GetFullPath(m_Tree->GetRootItem()));
-    if(dd.ShowModal()==wxID_CANCEL)
-        return;
-    for(int i=0;i<m_ticount;i++)
+    for(unsigned int i=0;i<selectedfiles.Count();i++)
     {
-        wxString path(GetFullPath(m_selectti[i]));  //SINGLE: m_Tree->GetSelection()
+        wxString path=selectedfiles[i];
         wxFileName destpath;
-        destpath.Assign(dd.GetPath(),wxFileName(path).GetFullName());
+        destpath.Assign(destination,wxFileName(path).GetFullName());
         if(destpath.SameAs(path))
             continue;
         if(wxFileName::FileExists(path)||wxFileName::DirExists(path))
@@ -1291,22 +1301,32 @@ void FileExplorer::OnCopy(wxCommandEvent &event)
                 MessageBox(m_Tree,_T("Copying '")+path+_T("' failed with error ")+wxString::Format(_T("%i"),hresult));
         }
     }
-    Refresh(m_Tree->GetRootItem()); //TODO: Can probably be more efficient than this
-    //TODO: Reselect item in new location?? (what it outside root scope?)
 }
 
-void FileExplorer::OnMove(wxCommandEvent &event)
+void FileExplorer::OnCopy(wxCommandEvent &event)
 {
-    wxDirDialog dd(this,_T("Move to"));
+    wxDirDialog dd(this,_T("Copy to"));
     dd.SetPath(GetFullPath(m_Tree->GetRootItem()));
+    wxArrayString selectedfiles;
+    for(int i=0;i<m_ticount;i++) // really important not to rely on TreeItemId ater modal dialogs because file updates can change the file tree in the background.
+    {
+        selectedfiles.Add(GetFullPath(m_selectti[i]));  //SINGLE: m_Tree->GetSelection()
+    }
     if(dd.ShowModal()==wxID_CANCEL)
         return;
-    for(int i=0;i<m_ticount;i++)
+    CopyFiles(dd.GetPath(),selectedfiles);
+//    Refresh(m_Tree->GetRootItem()); //TODO: Use this if monitoring not available
+    //TODO: Reselect item in new location?? (what if outside root scope?)
+}
+
+void FileExplorer::MoveFiles(const wxString &destination, const wxArrayString &selectedfiles)
+{
+    for(unsigned int i=0;i<selectedfiles.Count();i++)
     {
-        wxString path(GetFullPath(m_selectti[i]));  //SINGLE: m_Tree->GetSelection()
+        wxString path=selectedfiles[i];
         wxFileName destpath;
-        destpath.Assign(dd.GetPath(),wxFileName(path).GetFullName());
-        if(destpath.SameAs(path))
+        destpath.Assign(destination,wxFileName(path).GetFullName());
+        if(destpath.SameAs(path)) //TODO: Log message that can't copy over self.
             continue;
         if(wxFileName::FileExists(path)||wxFileName::DirExists(path))
         {
@@ -1320,7 +1340,19 @@ void FileExplorer::OnMove(wxCommandEvent &event)
                 MessageBox(m_Tree,_T("Moving '")+path+_T("' failed with error ")+wxString::Format(_T("%i"),hresult));
         }
     }
-    Refresh(m_Tree->GetRootItem()); //TODO: Can probably be more efficient than this
+}
+
+void FileExplorer::OnMove(wxCommandEvent &event)
+{
+    wxDirDialog dd(this,_T("Move to"));
+    wxArrayString selectedfiles;
+    for(int i=0;i<m_ticount;i++)
+        selectedfiles.Add(GetFullPath(m_selectti[i]));  //SINGLE: m_Tree->GetSelection()
+    dd.SetPath(GetFullPath(m_Tree->GetRootItem()));
+    if(dd.ShowModal()==wxID_CANCEL)
+        return;
+    MoveFiles(dd.GetPath(),selectedfiles);
+//    Refresh(m_Tree->GetRootItem()); //TODO: Can probably be more efficient than this
     //TODO: Reselect item in new location?? (what if outside root scope?)
 }
 

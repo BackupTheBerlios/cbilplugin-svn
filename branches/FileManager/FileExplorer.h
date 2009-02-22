@@ -70,6 +70,9 @@ public:
     bool SetRootFolder(wxString root);
     wxString GetRootFolder() {return m_root;}
     void FindFile(const wxString &file) {}
+    void MoveFiles(const wxString &destination, const wxArrayString &selectedfiles);
+    void CopyFiles(const wxString &destination, const wxArrayString &selectedfiles);
+
 private:
     // User initiated events
     void OnRightClick(wxTreeEvent &event);

@@ -2,8 +2,12 @@
 #include <wx/dir.h>
 #include <wx/filename.h>
 
-#include <wx/wxFlatNotebook/wxFNBDropTarget.h>
-#include <wx/wxFlatNotebook/wxFlatNotebook.h>
+#ifdef CB_AUI
+    #include <wx/aui/aui.h>
+#else
+    #include <wx/wxFlatNotebook/wxFNBDropTarget.h>
+    #include <wx/wxFlatNotebook/wxFlatNotebook.h>
+#endif
 
 
 #include <sdk.h>
@@ -101,12 +105,16 @@ public:
    FEDataObject():wxDataObjectComposite()
    {
        m_file=new wxFileDataObject;
-       m_notepage=new wxFNBDragInfoDataObject(_("wxFNB"));
        Add(m_file,true);
+       #ifndef CB_AUI
+       m_notepage=new wxFNBDragInfoDataObject(_("wxFNB"));
        Add(m_notepage);
+       #endif
    }
    wxFileDataObject *m_file;
+   #ifndef CB_AUI
    wxFNBDragInfoDataObject *m_notepage;
+   #endif
 
 };
 
@@ -123,6 +131,7 @@ public:
     virtual wxDragResult OnData(wxCoord x, wxCoord y, wxDragResult def)
     {
         GetData();
+        #ifndef CB_AUI
         if(m_data_object->GetReceivedFormat().GetId()==_("wxFNB"))
         {
             wxFNBDragInfo data;
@@ -152,7 +161,9 @@ public:
                 return wxDragCopy;
             return def;
         }
-        else if(m_data_object->GetReceivedFormat().GetType()==wxDF_FILENAME )
+        else
+        #endif CB_AUI
+        if(m_data_object->GetReceivedFormat().GetType()==wxDF_FILENAME )
         {
             wxArrayString as=m_data_object->m_file->GetFilenames();
             wxString files;

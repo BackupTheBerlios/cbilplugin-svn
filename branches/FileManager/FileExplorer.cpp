@@ -501,12 +501,28 @@ void FileExplorer::RecursiveRebuild(wxTreeItemId ti,Expansion *exp)
     }
 }
 
+void FileExplorer::RefreshExpanded(wxTreeItemId ti)
+{
+    if(m_Tree->IsExpanded(ti))
+        m_update_queue->Add(ti);
+    wxTreeItemIdValue cookie;
+    wxTreeItemId ch=m_Tree->GetFirstChild(ti,cookie);
+    while(ch.IsOk())
+    {
+        if(m_Tree->IsExpanded(ch))
+            RefreshExpanded(ch);
+        ch=m_Tree->GetNextChild(ti,cookie);
+    }
+    m_updatetimer->Start(10,true);
+
+}
 void FileExplorer::Refresh(wxTreeItemId ti)
 {
-//    Expansion e;
-//    GetExpandedNodes(ti,&e);
-//    RecursiveRebuild(ti,&e);
-    m_updating_node=ti;//m_Tree->GetRootItem();
+    //    Expansion e;
+    //    GetExpandedNodes(ti,&e);
+    //    RecursiveRebuild(ti,&e);
+    //m_updating_node=ti;//m_Tree->GetRootItem();
+    m_update_queue->Add(ti);
     m_updatetimer->Start(10,true);
 }
 
@@ -918,7 +934,6 @@ void FileExplorer::WriteConfig()
 void FileExplorer::OnEnterWild(wxCommandEvent &event)
 {
     wxString wild=m_WildCards->GetValue();
-    Refresh(m_Tree->GetRootItem());
     for(size_t i=0;i<m_WildCards->GetCount();i++)
     {
         wxString cmp;
@@ -935,19 +950,20 @@ void FileExplorer::OnEnterWild(wxCommandEvent &event)
     if(m_WildCards->GetCount()>10)
         m_WildCards->Delete(10);
     m_WildCards->SetSelection(0);
+    RefreshExpanded(m_Tree->GetRootItem());
 }
 
 void FileExplorer::OnChooseWild(wxCommandEvent &event)
 {
     // Beware on win32 that if user opens drop down, then types a wildcard the combo box
     // event will contain a -1 selection and an empty string item. Harmless in current code.
-    Refresh(m_Tree->GetRootItem());
     wxString wild=m_WildCards->GetValue();
     m_WildCards->Delete(m_WildCards->GetSelection());
     m_WildCards->Insert(wild,0);
 //    event.Skip(true);
 //    cbMessageBox(wild);
     m_WildCards->SetSelection(0);
+    RefreshExpanded(m_Tree->GetRootItem());
 }
 
 void FileExplorer::OnEnterLoc(wxCommandEvent &event)
@@ -1123,7 +1139,7 @@ void FileExplorer::OnRightClick(wxTreeEvent &event)
                 #endif
                 m_Popup->Append(ID_FILEMAKEFAV,_T("Add to Favorites"));
                 m_Popup->Append(ID_FILENEWFILE,_T("New File..."));
-                m_Popup->Append(ID_FILENEWFOLDER,_T("Ma&ke Directory..."));
+                m_Popup->Append(ID_FILENEWFOLDER,_T("New Directory..."));
                 m_Popup->Append(ID_FILERENAME,_T("&Rename..."));
             } else
             {
@@ -1417,7 +1433,7 @@ void FileExplorer::OnRename(wxCommandEvent &event)
         destpath.SetFullName(te.GetValue());
 #ifdef __WXMSW__
         wxArrayString output;
-        int hresult=::wxExecute(_T("cmd /c move /S/Q \"")+path+_T("\" \"")+destpath.GetFullPath()+_T("\""),output,wxEXEC_SYNC);
+        int hresult=::wxExecute(_T("cmd /c move /Y \"")+path+_T("\" \"")+destpath.GetFullPath()+_T("\""),output,wxEXEC_SYNC);
 #else
         int hresult=::wxExecute(_T("/bin/mv \"")+path+_T("\" \"")+destpath.GetFullPath()+_T("\""),wxEXEC_SYNC);
 #endif

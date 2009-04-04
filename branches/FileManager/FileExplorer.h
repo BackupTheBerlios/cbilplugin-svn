@@ -135,6 +135,7 @@ private:
     bool ValidateRoot();
     void RecursiveRebuild(wxTreeItemId ti, Expansion *exp);
     void Refresh(wxTreeItemId ti);
+    void RefreshExpanded(wxTreeItemId ti);
     void SetImages();
     wxMenu *m_Popup; // the popup menu that displays on right clicks in the tree (and maybe loc in future??)
     wxString m_root;

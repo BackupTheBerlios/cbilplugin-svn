@@ -142,7 +142,7 @@ public:
             }
         }
 
-        GError *err;
+        GError *err=NULL;
         GIOStatus s=g_io_channel_shutdown(m_msg_rcv_c, true, &err);
 
         g_main_context_unref(context);
@@ -357,6 +357,7 @@ public:
     }
     void *Entry()
     {
+        TestDestroy();
         bool handle_fail=false;
         m_handles=new HANDLE[m_pathnames.GetCount()];
         m_overlapped=new LPOVERLAPPED[m_pathnames.GetCount()];

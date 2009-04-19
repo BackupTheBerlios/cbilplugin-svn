@@ -336,6 +336,8 @@ FileExplorer::FileExplorer(wxWindow *parent,wxWindowID id,
 
 FileExplorer::~FileExplorer()
 {
+    m_updatetimer->Stop();
+    delete m_dir_monitor;
     WriteConfig();
     UpdateAbort();
     delete m_update_queue;

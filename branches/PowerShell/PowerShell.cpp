@@ -12,6 +12,7 @@ int ID_UpdateUI=wxNewId();
 int ID_LangMenu_Settings=wxNewId();
 int ID_LangMenu_RunPiped=wxNewId();
 int ID_LangMenu_ShowConsole=wxNewId();
+int ID_LangMenu_RemoveTerminated=wxNewId();
 int ID_PipedProcess=wxNewId();
 
 int ID_LaunchPythonProcess=wxNewId();
@@ -124,6 +125,7 @@ BEGIN_EVENT_TABLE(PowerShell, cbPlugin)
     EVT_MENU_RANGE(ID_ContextMenu_0,ID_ContextMenu_49,PowerShell::OnRunTarget)
     EVT_MENU_RANGE(ID_SubMenu_0, ID_SubMenu_49, PowerShell::OnRunTarget)
     EVT_MENU(ID_LangMenu_ShowConsole,PowerShell::OnShowConsole)
+    EVT_MENU(ID_LangMenu_RemoveTerminated,PowerShell::OnRemoveTerminated)
 //    EVT_MENU(ID_LaunchPythonProcess,PowerShell::OnLaunchPythonProcess)
     EVT_UPDATE_UI(ID_LangMenu_ShowConsole, PowerShell::OnUpdateUI)
 END_EVENT_TABLE()
@@ -145,6 +147,13 @@ void PowerShell::OnShowConsole(wxCommandEvent& event)
     evt.pWindow = m_shellmgr;
     Manager::Get()->ProcessEvent(evt);
 }
+
+void PowerShell::OnRemoveTerminated(wxCommandEvent& event)
+{
+    // Removes pages from the powershell window of process that have terminated
+    m_shellmgr->RemoveDeadPages();
+}
+
 
 void PowerShell::ShowConsole()
 {
@@ -561,7 +570,8 @@ void PowerShell::CreateMenu()
             menu->Append(ID_SubMenu_0+i,menuloc);
     }
     //m_LangMenu->Append(ID_LaunchPythonProcess,_T("Launch Python Interpreter"),_T(""));
-    m_LangMenu->Append(ID_LangMenu_ShowConsole,_T("Toggle Power Shell I/O Window"),_T(""),wxITEM_CHECK);
+    m_LangMenu->Append(ID_LangMenu_ShowConsole,_T("&Toggle Power Shell I/O Window"),_T(""),wxITEM_CHECK);
+    m_LangMenu->Append(ID_LangMenu_RemoveTerminated,_T("&Close Terminated I/O Tabs"),_T(""));
 }
 
 void PowerShell::AddModuleMenuEntry(wxMenu *modmenu,int entrynum, int idref)

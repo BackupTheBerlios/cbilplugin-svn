@@ -160,6 +160,20 @@ void ShellManager::KillWindow(int id)
 {
 }
 
+void ShellManager::RemoveDeadPages()
+{
+    int i=0;
+    while(i<m_nb->GetPageCount())
+    {
+        ShellCtrlBase *shell=GetPage(i);
+        if(shell->IsDead())
+            m_nb->RemovePage(i,false);
+        else
+            i++;
+    }
+}
+
+
 size_t ShellManager::GetTermNum(ShellCtrlBase *term)
 {
     for(int i=0;i<m_nb->GetPageCount();i++)

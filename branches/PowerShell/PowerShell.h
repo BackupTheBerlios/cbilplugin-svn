@@ -140,6 +140,7 @@ class PowerShell : public cbPlugin
         void OnRun(wxCommandEvent& event);
         void OnRunPiped(wxCommandEvent &event);
         void OnShowConsole(wxCommandEvent& event);
+        void OnRemoveTerminated(wxCommandEvent& event);
         void OnUpdateUI(wxUpdateUIEvent& event);
 
         void OnLaunchPythonProcess(wxCommandEvent &event);

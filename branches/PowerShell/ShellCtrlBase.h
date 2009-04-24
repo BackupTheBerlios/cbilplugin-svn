@@ -124,6 +124,7 @@ class ShellManager : public wxPanel
         long LaunchProcess(const wxString &processcmd, const wxString &name, const wxString &type, const wxArrayString &options);
         void KillProcess(int id);
         void KillWindow(int id);
+        void RemoveDeadPages();
         ShellCtrlBase *GetPage(size_t i);
         ShellCtrlBase *GetPage(const wxString &name);
         void OnShellTerminate(ShellCtrlBase *term);

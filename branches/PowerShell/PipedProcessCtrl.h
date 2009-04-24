@@ -25,6 +25,7 @@ class PipedTextCtrl: public wxTextCtrl
 public:
     PipedTextCtrl(wxWindow *parent, PipedProcessCtrl *pp) : wxTextCtrl(parent, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_RICH|wxTE_MULTILINE|wxTE_READONLY|wxTE_PROCESS_ENTER|wxEXPAND) {m_pp = pp;}
     void OnDClick(wxMouseEvent& e);
+    void OnUserInput(wxKeyEvent &e);
     PipedProcessCtrl *m_pp;
     DECLARE_EVENT_TABLE()
 };

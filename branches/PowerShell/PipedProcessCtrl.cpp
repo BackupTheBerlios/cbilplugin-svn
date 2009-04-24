@@ -9,11 +9,18 @@ int ID_PROC=wxNewId();
 
 BEGIN_EVENT_TABLE(PipedTextCtrl, wxTextCtrl)
     EVT_LEFT_DCLICK(PipedTextCtrl::OnDClick)
+    EVT_KEY_DOWN(PipedTextCtrl::OnUserInput)
 END_EVENT_TABLE()
 
 void PipedTextCtrl::OnDClick(wxMouseEvent &e)
 {
     m_pp->OnDClick(e);
+}
+
+
+void PipedTextCtrl::OnUserInput(wxKeyEvent &e)
+{
+    m_pp->OnUserInput(e);
 }
 
 

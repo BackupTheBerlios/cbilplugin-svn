@@ -274,7 +274,7 @@ void PowerShell::OnRunTarget(wxCommandEvent& event)
         {
             m_RunTarget=wxEmptyString;
             EditorManager* edMan = Manager::Get()->GetEditorManager();
-            if(edMan)
+            if(edMan && edMan->GetActiveEditor() && edMan->GetActiveEditor()->GetFilename())
             {
                 wxFileName activefile(edMan->GetActiveEditor()->GetFilename());
                 wxString filename=activefile.GetFullPath();

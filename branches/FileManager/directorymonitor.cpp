@@ -248,9 +248,9 @@ public:
     DirMonitorThread(wxEvtHandler *parent, wxArrayString pathnames, bool singleshot, bool subtree, DWORD notifyfilter, DWORD waittime_ms)
         : wxThread(wxTHREAD_JOINABLE)
     {
-        m_interrupt_event=CreateEvent(NULL, FALSE, FALSE, NULL);
+        m_interrupt_event[0]=CreateEvent(NULL, FALSE, FALSE, NULL);
+        m_interrupt_event[1]=CreateEvent(NULL, FALSE, FALSE, NULL);
 
-        m_kill=false;
         m_parent=parent;
         m_waittime=waittime_ms;
         m_subtree=subtree;
@@ -263,10 +263,7 @@ public:
     }
     void WaitKill()
     {
-        m_interrupt_mutex2.Lock();
-        m_kill=true;
-        m_interrupt_mutex2.Unlock();
-        SetEvent(m_interrupt_event);
+        SetEvent(m_interrupt_event[1]);
     }
     void UpdatePaths(const wxArrayString &paths)
     {
@@ -274,8 +271,8 @@ public:
         m_update_paths.Empty();
         for(unsigned int i=0;i<paths.GetCount();i++)
             m_update_paths.Add(paths[i].c_str());
-        m_interrupt_mutex2.Unlock();
         SetEvent(m_interrupt_event);
+        m_interrupt_mutex2.Unlock();
     }
     bool UpdatePathsThread()
     {
@@ -357,12 +354,11 @@ public:
     }
     void *Entry()
     {
-        TestDestroy();
         bool handle_fail=false;
         m_handles=new HANDLE[m_pathnames.GetCount()];
         m_overlapped=new LPOVERLAPPED[m_pathnames.GetCount()];
         m_changedata=new PFILE_NOTIFY_INFORMATION[m_pathnames.GetCount()];
-        for(unsigned int i=0;i<m_pathnames.GetCount();i++)
+        for(unsigned int i=0;i<m_pathnames.GetCount() &&!TestDestroy();i++)
         {
             m_handles[i] = ::CreateFile(m_pathnames[i].c_str(),FILE_LIST_DIRECTORY,FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,NULL,OPEN_EXISTING,FILE_FLAG_BACKUP_SEMANTICS|FILE_FLAG_OVERLAPPED,NULL);
             if(m_handles[i]==INVALID_HANDLE_VALUE)
@@ -381,23 +377,20 @@ public:
             }
         }
         //TODO: Error checking
-        bool kill=false;
-        while(!handle_fail && !TestDestroy() && !kill)
+        while(!handle_fail && !TestDestroy())
         {
-            DWORD result=::WaitForSingleObjectEx(m_interrupt_event,INFINITE,true);
+            DWORD result=::WaitForMultipleObjectsEx(2,m_interrupt_event,false,INFINITE,true);
             if(result==WAIT_FAILED || result==WAIT_ABANDONED_0)
-            {
-                kill=true;
-            }
+                break;
+            if(result==WAIT_OBJECT_0+1)
+                break;
             if(result==WAIT_OBJECT_0)
             {
                 m_interrupt_mutex2.Lock();
-                kill=m_kill;
-                if(!m_kill)
-                    if(!UpdatePathsThread())
-                        handle_fail=true;
+                if(!UpdatePathsThread())
+                    handle_fail=true;
+                ResetEvent(m_interrupt_event[0]);
                 m_interrupt_mutex2.Unlock();
-                ResetEvent(m_interrupt_event);
             }
             if(m_singleshot)
                 break;
@@ -415,7 +408,7 @@ public:
         delete [] m_changedata;
         delete [] m_overlapped;
         delete [] m_handles;
-//        wxMessageBox(_("ERROR: Monitor died"));
+        wxMessageBox(_("Monitor return"));
 //        wxDirectoryMonitorEvent e(wxEmptyString,MONITOR_FINISHED,wxEmptyString);
 //        m_parent->AddPendingEvent(e);
         return NULL;
@@ -425,9 +418,12 @@ public:
         if(IsRunning())
         {
             WaitKill();
+            wxMessageBox(_("Monitor wait"));
             Wait();//Delete();
+            wxMessageBox(_("Monitor wait over"));
         }
-        CloseHandle(m_interrupt_event);
+        CloseHandle(m_interrupt_event[0]);
+        CloseHandle(m_interrupt_event[1]);
     }
     void ReadChanges(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered, LPOVERLAPPED lpOverlapped)
     {
@@ -493,12 +489,11 @@ public:
         }
     }
 
-    HANDLE m_interrupt_event;
+    HANDLE m_interrupt_event[2];
     wxMutex m_interrupt_mutex2;
     DWORD m_waittime;
     bool m_subtree;
     bool m_singleshot;
-    bool m_kill;
     wxArrayString m_pathnames;
     wxArrayString m_update_paths;
     DWORD m_notifyfilter;

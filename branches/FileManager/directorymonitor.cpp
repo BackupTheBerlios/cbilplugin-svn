@@ -271,12 +271,11 @@ public:
         m_update_paths.Empty();
         for(unsigned int i=0;i<paths.GetCount();i++)
             m_update_paths.Add(paths[i].c_str());
-        SetEvent(m_interrupt_event);
+        SetEvent(m_interrupt_event[0]);
         m_interrupt_mutex2.Unlock();
     }
     bool UpdatePathsThread()
     {
-//        wxMessageBox(_("Updating"));
         m_interrupt_mutex2.Lock();
         HANDLE *handles=new HANDLE[m_update_paths.GetCount()];
         LPOVERLAPPED *overlapped=new LPOVERLAPPED[m_update_paths.GetCount()];
@@ -287,7 +286,6 @@ public:
             int index=m_update_paths.Index(m_pathnames[i]);
             if(index==wxNOT_FOUND && m_handles[i]!=INVALID_HANDLE_VALUE)
             {
-//                wxMessageBox(_("Closing handle"));
                 ::CancelIo(m_handles[i]);
                 ::CloseHandle(m_handles[i]);
                 delete m_changedata[i];
@@ -408,7 +406,6 @@ public:
         delete [] m_changedata;
         delete [] m_overlapped;
         delete [] m_handles;
-        wxMessageBox(_("Monitor return"));
 //        wxDirectoryMonitorEvent e(wxEmptyString,MONITOR_FINISHED,wxEmptyString);
 //        m_parent->AddPendingEvent(e);
         return NULL;
@@ -418,9 +415,7 @@ public:
         if(IsRunning())
         {
             WaitKill();
-            wxMessageBox(_("Monitor wait"));
             Wait();//Delete();
-            wxMessageBox(_("Monitor wait over"));
         }
         CloseHandle(m_interrupt_event[0]);
         CloseHandle(m_interrupt_event[1]);
@@ -540,10 +535,10 @@ void wxDirectoryMonitor::ChangePaths(const wxArrayString &uri)
 {
     m_uri=uri;
     m_monitorthread->UpdatePaths(uri);
-    wxString p=_("Monitoring:");
-    for(int i=0;i<uri.GetCount();i++)
-        p+=uri[i]+_(", ");
-    LogMessage(p);
+//    wxString p=_("Monitoring:");
+//    for(int i=0;i<uri.GetCount();i++)
+//        p+=uri[i]+_(", ");
+//    LogMessage(p);
 }
 
 wxDirectoryMonitor::~wxDirectoryMonitor()

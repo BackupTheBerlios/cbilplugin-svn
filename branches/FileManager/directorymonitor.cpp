@@ -268,22 +268,23 @@ public:
     void UpdatePaths(const wxArrayString &paths)
     {
         m_interrupt_mutex2.Lock();
-        m_update_paths.Empty();
-        for(unsigned int i=0;i<paths.GetCount();i++)
-            m_update_paths.Add(paths[i].c_str());
+        m_update_paths=paths;
         SetEvent(m_interrupt_event[0]);
         m_interrupt_mutex2.Unlock();
     }
     bool UpdatePathsThread()
     {
         m_interrupt_mutex2.Lock();
-        HANDLE *handles=new HANDLE[m_update_paths.GetCount()];
-        LPOVERLAPPED *overlapped=new LPOVERLAPPED[m_update_paths.GetCount()];
-        PFILE_NOTIFY_INFORMATION *changedata=new PFILE_NOTIFY_INFORMATION[m_update_paths.GetCount()];
+        wxArrayString update_paths;
+        for(unsigned int i=0;i<m_update_paths.GetCount();i++)
+            update_paths.Add(m_update_paths[i].c_str());
+        HANDLE *handles=new HANDLE[update_paths.GetCount()];
+        LPOVERLAPPED *overlapped=new LPOVERLAPPED[update_paths.GetCount()];
+        PFILE_NOTIFY_INFORMATION *changedata=new PFILE_NOTIFY_INFORMATION[update_paths.GetCount()];
 
         for(size_t i=0;i<m_pathnames.GetCount();i++)
         {
-            int index=m_update_paths.Index(m_pathnames[i]);
+            int index=update_paths.Index(m_pathnames[i]);
             if(index==wxNOT_FOUND && m_handles[i]!=INVALID_HANDLE_VALUE)
             {
                 ::CancelIo(m_handles[i]);
@@ -292,9 +293,9 @@ public:
                 m.erase(m_overlapped[i]);
             }
         }
-        for(size_t i=0;i<m_update_paths.GetCount();i++)
+        for(size_t i=0;i<update_paths.GetCount();i++)
         {
-            int index=m_pathnames.Index(m_update_paths[i]);
+            int index=m_pathnames.Index(update_paths[i]);
             if(index!=wxNOT_FOUND)
             {
                 handles[i]=m_handles[index];
@@ -305,7 +306,7 @@ public:
             }
             else
             {
-                handles[i] = ::CreateFile(m_update_paths[i].c_str(),FILE_LIST_DIRECTORY,FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,NULL,OPEN_EXISTING,FILE_FLAG_BACKUP_SEMANTICS|FILE_FLAG_OVERLAPPED,NULL);
+                handles[i] = ::CreateFile(update_paths[i].c_str(),FILE_LIST_DIRECTORY,FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,NULL,OPEN_EXISTING,FILE_FLAG_BACKUP_SEMANTICS|FILE_FLAG_OVERLAPPED,NULL);
                 if(handles[i]==INVALID_HANDLE_VALUE)
                 {
 //                    wxMessageBox(wxString::Format(_("handle failed on create %i"),GetLastError()));
@@ -327,7 +328,7 @@ public:
         m_handles=handles;
         m_overlapped=overlapped;
         m_changedata=changedata;
-        m_pathnames=m_update_paths;
+        m_pathnames=update_paths;
         m_interrupt_mutex2.Unlock();
         for(size_t i=0;i<m_pathnames.GetCount();i++)
         {

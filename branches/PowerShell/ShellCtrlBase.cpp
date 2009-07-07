@@ -73,11 +73,19 @@ ShellCtrlBase::ShellCtrlBase(wxWindow* parent, int id, const wxString &name, She
 BEGIN_EVENT_TABLE(ShellManager, wxPanel)
     EVT_CHAR(ShellManager::OnUserInput)
     EVT_TIMER(ID_SHELLPOLLTIMER, ShellManager::OnPollandSyncOutput)
+#ifdef CB_AUI
+    EVT_AUINOTEBOOK_PAGE_CLOSE(ID_SHELLMGR, ShellManager::OnPageClosing)
+#else
     EVT_FLATNOTEBOOK_PAGE_CLOSING(ID_SHELLMGR, ShellManager::OnPageClosing)
+#endif
 END_EVENT_TABLE()
 
 
+#ifdef CB_AUI
+void ShellManager::OnPageClosing(wxAuiNotebookEvent& event)
+#else
 void ShellManager::OnPageClosing(wxFlatNotebookEvent& event)
+#endif
 {
     ShellCtrlBase* sh = GetPage(event.GetSelection());
     //    LOGSTREAM << wxString::Format(_T("OnPageClosing(): ed=%p, title=%s\n"), eb, eb ? eb->GetTitle().c_str() : _T(""));
@@ -167,7 +175,11 @@ void ShellManager::RemoveDeadPages()
     {
         ShellCtrlBase *shell=GetPage(i);
         if(shell->IsDead())
+#ifdef CB_AUI
+            m_nb->RemovePage(i);
+#else
             m_nb->RemovePage(i,false);
+#endif
         else
             i++;
     }
@@ -222,7 +234,11 @@ ShellManager::ShellManager(wxWindow* parent)
 {
     m_synctimer.SetOwner(this, ID_SHELLPOLLTIMER);
     wxBoxSizer* bs = new wxBoxSizer(wxVERTICAL);
+#ifdef CB_AUI
+    m_nb = new wxAuiNotebook(this, ID_SHELLMGR, wxDefaultPosition, wxDefaultSize, wxAUI_NB_CLOSE_ON_ACTIVE_TAB);
+#else
     m_nb = new wxFlatNotebook(this, ID_SHELLMGR, wxDefaultPosition, wxDefaultSize, wxFNB_X_ON_TAB|wxFNB_NO_X_BUTTON);
+#endif
     bs->Add(m_nb, 1, wxEXPAND | wxALL);
     SetAutoLayout(TRUE);
     SetSizer(bs);

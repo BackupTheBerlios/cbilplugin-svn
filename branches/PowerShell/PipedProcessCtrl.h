@@ -8,7 +8,11 @@
 #endif
 
 #include <wx/process.h>
-#include <wx/wxFlatNotebook/wxFlatNotebook.h>
+#ifdef CB_AUI
+    #include <wx/aui/aui.h>
+#else
+    #include <wx/wxFlatNotebook/wxFlatNotebook.h>
+#endif
 
 #include <sdk.h>
 #include "ShellCtrlBase.h"

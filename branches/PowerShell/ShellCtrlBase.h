@@ -12,7 +12,11 @@
 
 
 #include <wx/process.h>
-#include <wx/wxFlatNotebook/wxFlatNotebook.h>
+#ifdef CB_AUI
+    #include <wx/aui/aui.h>
+#else
+    #include <wx/wxFlatNotebook/wxFlatNotebook.h>
+#endif
 #include <sdk.h>
 #include "se_globals.h"
 
@@ -133,13 +137,21 @@ class ShellManager : public wxPanel
         //Responders to standard wxWidgets Messages
         void OnUserInput(wxKeyEvent& ke);
         void OnPollandSyncOutput(wxTimerEvent& te);
+#ifdef CB_AUI
+        void OnPageClosing(wxAuiNotebookEvent& event);
+#else
         void OnPageClosing(wxFlatNotebookEvent& event);
+#endif
         bool QueryClose(ShellCtrlBase* sh);
         //Responders to friend class ShellCtrlBase
         size_t GetTermNum(ShellCtrlBase *term);
     protected:
         wxTimer m_synctimer;
+#ifdef CB_AUI
+        wxAuiNotebook *m_nb;
+#else
         wxFlatNotebook *m_nb;
+#endif
     DECLARE_EVENT_TABLE()
 };
 

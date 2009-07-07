@@ -346,6 +346,7 @@ FileExplorer::~FileExplorer()
 
 bool FileExplorer::SetRootFolder(wxString root)
 {
+    UpdateAbort();
     if(root[root.Len()-1]!=wxFileName::GetPathSeparator())
         root=root+wxFileName::GetPathSeparator();
 #ifdef __WXMSW__
@@ -604,6 +605,7 @@ void FileExplorer::OnUpdateTreeItems(wxCommandEvent &e)
     if(m_updater_cancel || !ti.IsOk())
     { //NODE WAS DELETED - REFRESH NOW!
         //TODO: Should only need to clean up and restart the timer (no need to change queue)
+        LogMessage(wxString::Format(_("Cancelling update %i"),up_count));
         m_updater->Delete();
         m_updater=NULL;
         m_update_active=false;

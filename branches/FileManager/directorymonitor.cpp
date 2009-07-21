@@ -24,8 +24,219 @@ wxDirectoryMonitorEvent::wxDirectoryMonitorEvent(const wxDirectoryMonitorEvent& 
 
 #ifdef __WXGTK__
 
-#include <libgnomevfs/gnome-vfs.h>
 #include <map>
+
+#ifdef __GIO__
+
+#include <gio/gio.h>
+
+typedef std::map<GFileMonitor *, DirMonitorThread *> MonMap;
+static MonMap m;
+
+class DirMonitorThread : public wxThread
+{
+public:
+    DirMonitorThread(wxEvtHandler *parent, wxArrayString pathnames, bool singleshot, bool subtree, int notifyfilter, int waittime_ms)
+        : wxThread(wxTHREAD_JOINABLE)
+    {
+        m_parent=parent;
+        m_waittime=waittime_ms;
+        m_subtree=subtree;
+        m_singleshot=singleshot;
+        m_pathnames=pathnames;
+        m_notifyfilter=notifyfilter;
+        int pipehandles[2];
+        pipe(pipehandles);
+        m_msg_rcv=pipehandles[0];
+        m_msg_send=pipehandles[1];
+        m_msg_rcv_c=g_io_channel_unix_new(pipehandles[0]);
+//        write(m_msg_send,"ab",2);
+//        char d='1';
+//        read(m_msg_rcv,&d,1);
+//        wxMessageBox(wxString::FromUTF8(&d,1));
+//        GError *err;
+//        gsize len;
+//        gchar c='1';
+//        g_io_channel_read_chars(m_msg_rcv_c,&c,1,&len,&err);
+//        wxMessageBox(wxString::FromUTF8(&c,1));
+        return;
+    }
+    static gboolean tn_callback(GIOChannel *channel, GIOCondition cond, gpointer data)
+    {
+        DirMonitorThread *mon=(DirMonitorThread *)data;
+        mon->m_interrupt_mutex.Lock();
+        char c;
+//        GError *err;
+//        gsize read;
+        read(mon->m_msg_rcv, &c, 1);
+//        GIOStatus s=g_io_channel_read_chars(mon->m_msg_rcv, &c, 1, &read, &err);
+        mon->UpdatePathsThread();
+        mon->m_interrupt_mutex.Unlock();
+        return true;
+    }
+    void UpdatePathsThread()
+    {
+        std::vector<GFileMonitor *> new_h(m_update_paths.GetCount(),NULL); //TODO: initialize vector size
+        for(size_t i=0;i<m_pathnames.GetCount();i++) //delete monitors that aren't needed
+        {
+            int index=m_update_paths.Index(m_pathnames[i]);
+            if(index==wxNOT_FOUND && m_h[i])
+            {
+                g_file_monitor_cancel(m_h[i]);
+                m.erase(m_h[i]);
+            }
+        }
+        for(size_t i=0;i<m_update_paths.GetCount();i++) // copy existing monitors and add new ones
+        {
+            int index=m_pathnames.Index(m_update_paths[i]);
+            if(index!=wxNOT_FOUND)
+            {
+                new_h[i]=m_h[index];
+            }
+            else
+            {
+                GFile *file=g_file_new_for_path(m_update_paths[i].ToUTF8());
+                GFileMonitor *h= g_file_monitor_directory(file,G_FILE_MONITOR_NONE,NULL,NULL);
+                if(h)
+                {
+                    new_h[i]=h;
+                    m[h]=this;
+                } else
+                {
+                    new_h[i]=NULL;
+                    //TODO: Notify owner error
+                }
+            }
+        }
+        m_h=new_h; //replace the old with the new
+        m_pathnames=m_update_paths;
+    }
+    void *Entry()
+    {
+        m_interrupt_mutex.Lock();
+        m_thread_notify=false;
+        context=g_main_context_new();
+        loop=g_main_loop_new(context,FALSE);
+
+        guint result=g_io_add_watch(m_msg_rcv_c, G_IO_IN, &tn_callback, this);
+        for(unsigned int i=0;i<m_pathnames.GetCount();i++)
+        {
+            GFile *file=g_file_new_for_path(m_pathnames[i].ToUTF8());
+            GFileMonitor *h= g_file_monitor_directory(file,G_FILE_MONITOR_NONE,NULL,NULL);
+            if(h)
+            {
+                m_h.push_back(h);
+                m[h]=this;
+            } else
+            {
+                m_h.push_back(NULL);
+                //TODO: Log an error
+            }
+        }
+        //TODO: Add a timer for killing singleshot instances
+        m_interrupt_mutex.Unlock();
+
+        g_main_loop_run(loop);
+
+        m_interrupt_mutex.Lock();
+        for(unsigned int i=0;i<m_pathnames.GetCount();i++)
+        {
+            if(m_h[i])
+            {
+                g_file_monitor_cancel(m_h[i]);
+                m.erase(m_h[i]);
+            }
+        }
+
+        GError *err=NULL;
+        GIOStatus s=g_io_channel_shutdown(m_msg_rcv_c, true, &err);
+
+        g_main_context_unref(context);
+        m_interrupt_mutex.Unlock();
+        return NULL;
+    }
+    ~DirMonitorThread()
+    {
+        g_main_loop_quit(loop);
+        if(IsRunning())
+            Wait();//Delete();
+        close(m_msg_rcv);
+        close(m_msg_send);
+    }
+
+    void Callback(const wxString *mon_dir, int EventType, const wxString &uri)
+    {
+        int action=0;
+        switch(EventType)
+        {
+            case G_FILE_MONITOR_EVENT_CHANGED:
+            case G_FILE_MONITOR_EVENT_CHANGES_DONE_HINT:
+                action=MONITOR_FILE_CHANGED;
+                break;
+            case G_FILE_MONITOR_EVENT_DELETED:
+                action=MONITOR_FILE_DELETED;
+                break;
+            case G_FILE_MONITOR_EVENT_CREATED:
+                action=MONITOR_FILE_CREATED;
+                break;
+            case G_FILE_MONITOR_EVENT_ATTRIBUTE_CHANGED:
+                action=MONITOR_FILE_ATTRIBUTES;
+                break;
+        }
+        if(action&m_notifyfilter)
+        {
+            wxDirectoryMonitorEvent e(mon_dir->c_str(),action,uri);
+            m_parent->AddPendingEvent(e);
+        }
+    }
+
+    static void MonitorCallback(GFileMonitor *handle,GFile *monitor_uri,GFile *info_uri,GFileMonitorEvent event_type,gpointer user_data)
+    {
+        if(m.find(handle)!=m.end())
+            m[handle]->Callback((wxString *)user_data, event_type, wxString::FromUTF8(g_file_get_path(info_uri)));
+        //TODO: ELSE WARNING/ERROR
+    }
+    void UpdatePaths(const wxArrayString &paths)
+    {
+        m_interrupt_mutex.Lock();
+        m_update_paths.Empty();
+        for(unsigned int i=0;i<paths.GetCount();i++)
+            m_update_paths.Add(paths[i].c_str());
+        GError *err;
+        //GIOStatus s=g_io_channel_write_unichar(m_msg_send, 'm',&err);
+        char m='m';
+        gsize num;
+        write(m_msg_send,&m,1);
+        //flush(m_msg_send);
+//        GIOStatus s=g_io_channel_write_chars(m_msg_send, &m, 1, &num,&err);
+//        if(s!=G_IO_STATUS_NORMAL)
+//            wxMessageBox(_("Write error!"));
+//        s=g_io_channel_flush(m_msg_send, &err);
+//        if(s!=G_IO_STATUS_NORMAL)
+//            wxMessageBox(_("Flush error!"));
+        m_interrupt_mutex.Unlock();
+
+    }
+
+    int m_msg_rcv;
+    int m_msg_send;
+    GIOChannel *m_msg_rcv_c;
+    bool m_thread_notify;
+    wxMutex m_interrupt_mutex;
+    GMainContext *context;
+    GMainLoop *loop;
+    int m_waittime;
+    bool m_subtree;
+    bool m_singleshot;
+    wxArrayString m_pathnames, m_update_paths;
+    int m_notifyfilter;
+    std::vector<GFileMonitor *> m_h;
+    wxEvtHandler *m_parent;
+};
+#else //USE VFS INSTEAD
+
+#include <libgnomevfs/gnome-vfs.h>
+
 typedef std::map<GnomeVFSMonitorHandle *, DirMonitorThread *> MonMap;
 static MonMap m;
 
@@ -230,6 +441,7 @@ public:
     std::vector<GnomeVFSMonitorHandle *> m_h;
     wxEvtHandler *m_parent;
 };
+#endif //__GIO__
 
 #endif
 #ifdef __WXMSW__
@@ -516,8 +728,10 @@ wxDirectoryMonitor::wxDirectoryMonitor(wxEvtHandler *parent, const wxArrayString
 {
     //TODO: put init and shutdown in static members
 #ifdef __WXGTK__
+#ifndef __GIO__
     if(!gnome_vfs_initialized())
         gnome_vfs_init();
+#endif
 #endif
     m_parent=parent;
     m_uri=uri;

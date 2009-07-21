@@ -46,6 +46,7 @@
 			<Add option="-g" />
 			<Add option="`wx-config --cflags`" />
 			<Add option="`pkg-config --cflags gnome-vfs-2.0`" />
+			<Add option="`pkg-config --cflags gio-2.0`" />
 			<Add option="-fmessage-length=0" />
 			<Add option="-fexceptions" />
 			<Add option="-Winvalid-pch" />
@@ -54,6 +55,7 @@
 			<Add option="-fPIC" />
 			<Add option="-DcbDEBUG" />
 			<Add option="-DCB_PRECOMP" />
+			<Add option="-D__GIO__" />
 			<Add directory="../../../include" />
 			<Add directory="../../../include/wxscintilla/include" />
 			<Add directory="../../../include/wxFlatNotebook/include" />
@@ -61,6 +63,7 @@
 		<Linker>
 			<Add option="`wx-config --libs`" />
 			<Add option="`pkg-config --libs gnome-vfs-2.0`" />
+			<Add option="`pkg-config --libs gio-2.0`" />
 			<Add library="codeblocks" />
 			<Add library="wxscintilla" />
 			<Add directory="../../../devel" />

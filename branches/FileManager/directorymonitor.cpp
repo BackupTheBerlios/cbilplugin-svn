@@ -99,6 +99,7 @@ public:
                 GFileMonitor *h= g_file_monitor_directory(file,G_FILE_MONITOR_NONE,NULL,NULL);
                 if(h)
                 {
+                    g_signal_connect(h,"changed",G_CALLBACK(DirMonitorThread::MonitorCallback),&m_pathnames[i]);
                     new_h[i]=h;
                     m[h]=this;
                 } else
@@ -125,6 +126,7 @@ public:
             GFileMonitor *h= g_file_monitor_directory(file,G_FILE_MONITOR_NONE,NULL,NULL);
             if(h)
             {
+                g_signal_connect(h,"changed",G_CALLBACK(DirMonitorThread::MonitorCallback),&m_pathnames[i]);
                 m_h.push_back(h);
                 m[h]=this;
             } else
@@ -144,6 +146,7 @@ public:
             if(m_h[i])
             {
                 g_file_monitor_cancel(m_h[i]);
+                g_object_unref(m_h[i]);
                 m.erase(m_h[i]);
             }
         }

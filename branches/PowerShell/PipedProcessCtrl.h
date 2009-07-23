@@ -40,7 +40,7 @@ class PipedProcessCtrl : public ShellCtrlBase
     public:
         PipedProcessCtrl() {}
         PipedProcessCtrl(wxWindow* parent, int id, const wxString &name, ShellManager *shellmgr=NULL);
-        virtual ~PipedProcessCtrl() {if (m_proc) {if (!m_dead) {m_proc->Detach();} } }
+        virtual ~PipedProcessCtrl() {if (m_proc) {if (!m_dead) {m_proc->Detach();} }  }
         void ParseLinks(int lineno, int lastline);
         long LaunchProcess(const wxString &processcmd, const wxArrayString &options); //bool ParseLinks=true, bool LinkClicks=true, const wxString &LinkRegex=LinkRegexDefault
         void KillProcess();

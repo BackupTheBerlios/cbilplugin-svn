@@ -331,7 +331,7 @@ public:
         for(unsigned int i=0;i<m_pathnames.GetCount();i++)
         {
             GnomeVFSMonitorHandle *h;
-            if(gnome_vfs_monitor_add(&h, m_pathnames[i].ToUTF8(), GNOME_VFS_MONITOR_DIRECTORY, &DirMonitorThread::MonitorCallback, &m_pathnames[i])==GNOME_VFS_OK)
+            if(gnome_vfs_monitor_add(&h, m_pathnames[i].ToUTF8(), GNOME_VFS_MONITOR_DIRECTORY, G_CALLBACK(DirMonitorThread::MonitorCallback), &m_pathnames[i])==GNOME_VFS_OK)
             {
                 m_h.push_back(h);
                 m[h]=this;

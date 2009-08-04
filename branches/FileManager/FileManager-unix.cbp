@@ -37,6 +37,23 @@
 					<Add after="zip -j9 ../../../devel/share/codeblocks/FileManager.zip manifest.xml Resources/fileexplorersettings.xrc" />
 				</ExtraCommands>
 			</Target>
+			<Target title="plugin-binary">
+				<Option output="plugin/FileManager.so" prefix_auto="0" extension_auto="0" />
+				<Option type="3" />
+				<Option compiler="gcc" />
+				<Option parameters="--personality=debug -ni" />
+				<Option host_application="../../../devel/codeblocks" />
+				<Option projectIncludeDirsRelation="1" />
+				<Compiler>
+					<Add option="-Wall" />
+					<Add option="-g" />
+					<Add option="-DCB_AUI" />
+				</Compiler>
+				<ExtraCommands>
+					<Add after="zip -j9 plugin/FileManager.zip manifest.xml Resources/fileexplorersettings.xrc" />
+					<Add after="zip -j9 plugin/FileManager.cbplugin plugin/FileManager.zip plugin/FileManager.so" />
+				</ExtraCommands>
+			</Target>
 		</Build>
 		<VirtualTargets>
 			<Add alias="All" targets="default;" />
@@ -65,7 +82,6 @@
 			<Add option="`pkg-config --libs gnome-vfs-2.0`" />
 			<Add option="`pkg-config --libs gio-2.0`" />
 			<Add library="codeblocks" />
-			<Add library="wxscintilla" />
 			<Add directory="../../../devel" />
 		</Linker>
 		<Unit filename="FileExplorer.cpp" />

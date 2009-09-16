@@ -483,6 +483,9 @@ public:
     void UpdatePaths(const wxArrayString &paths)
     {
         m_interrupt_mutex2.Lock();
+        m_update_paths.Empty();
+        for(unsigned int i=0;i<paths.GetCount();i++)
+            m_update_paths.Add(paths[i].c_str());
         m_update_paths=paths;
         SetEvent(m_interrupt_event[0]);
         m_interrupt_mutex2.Unlock();

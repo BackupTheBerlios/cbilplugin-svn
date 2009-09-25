@@ -43,7 +43,8 @@ public:
         m_waittime=waittime_ms;
         m_subtree=subtree;
         m_singleshot=singleshot;
-        m_pathnames=pathnames;
+        for(unsigned int i=0;i<pathnames.GetCount();i++)
+            m_pathnames.Add(pathnames[i].c_str());
         m_notifyfilter=notifyfilter;
         int pipehandles[2];
         pipe(pipehandles);
@@ -253,7 +254,8 @@ public:
         m_waittime=waittime_ms;
         m_subtree=subtree;
         m_singleshot=singleshot;
-        m_pathnames=pathnames;
+        for(unsigned int i=0;i<pathnames.GetCount();i++)
+            m_pathnames.Add(pathnames[i].c_str());
         m_notifyfilter=notifyfilter;
         int pipehandles[2];
         pipe(pipehandles);

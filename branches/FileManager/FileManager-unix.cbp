@@ -43,12 +43,15 @@
 				<Option compiler="gcc" />
 				<Option parameters="--personality=debug -ni" />
 				<Option host_application="../../../devel/codeblocks" />
-				<Option projectIncludeDirsRelation="1" />
+				<Option projectLibDirsRelation="1" />
 				<Compiler>
 					<Add option="-Wall" />
 					<Add option="-g" />
 					<Add option="-DCB_AUI" />
 				</Compiler>
+				<Linker>
+					<Add directory="/opt/codeblocks-svn/lib" />
+				</Linker>
 				<ExtraCommands>
 					<Add after="zip -j9 plugin/FileManager.zip manifest.xml Resources/fileexplorersettings.xrc" />
 					<Add after="zip -j9 plugin/FileManager.cbplugin plugin/FileManager.zip plugin/FileManager.so" />
@@ -75,7 +78,6 @@
 			<Add option="-D__GIO__" />
 			<Add directory="../../../include" />
 			<Add directory="../../../include/wxscintilla/include" />
-			<Add directory="../../../include/wxFlatNotebook/include" />
 		</Compiler>
 		<Linker>
 			<Add option="`wx-config --libs`" />

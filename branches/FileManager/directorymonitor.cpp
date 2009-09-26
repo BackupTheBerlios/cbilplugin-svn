@@ -30,7 +30,18 @@ wxDirectoryMonitorEvent::wxDirectoryMonitorEvent(const wxDirectoryMonitorEvent& 
 
 #include <gio/gio.h>
 
-typedef std::map<GFileMonitor *, DirMonitorThread *> MonMap;
+struct MonMapData
+{
+    MonMapData(){m_monitor=NULL;}
+    MonMapData(DirMonitorThread *owner_monitor,const wxString &path)
+    {
+        m_path=path.c_str();
+        m_monitor=owner_monitor;
+    }
+    DirMonitorThread *m_monitor; //pointer to the DirMonitorThread class that created the GFileMonitor
+    wxString m_path; //the directory associated with this monitor
+};
+typedef std::map<GFileMonitor *, MonMapData> MonMap;
 static MonMap m;
 
 class DirMonitorThread : public wxThread
@@ -100,9 +111,9 @@ public:
                 GFileMonitor *h= g_file_monitor_directory(file,G_FILE_MONITOR_NONE,NULL,NULL);
                 if(h)
                 {
-                    g_signal_connect(h,"changed",G_CALLBACK(DirMonitorThread::MonitorCallback),&m_pathnames[i]);
+                    g_signal_connect(h,"changed",G_CALLBACK(DirMonitorThread::MonitorCallback),NULL);
                     new_h[i]=h;
-                    m[h]=this;
+                    m[h]=MonMapData(this,m_update_paths[i]);
                 } else
                 {
                     new_h[i]=NULL;
@@ -127,9 +138,9 @@ public:
             GFileMonitor *h= g_file_monitor_directory(file,G_FILE_MONITOR_NONE,NULL,NULL);
             if(h)
             {
-                g_signal_connect(h,"changed",G_CALLBACK(DirMonitorThread::MonitorCallback),&m_pathnames[i]);
+                g_signal_connect(h,"changed",G_CALLBACK(DirMonitorThread::MonitorCallback),NULL);
                 m_h.push_back(h);
-                m[h]=this;
+                m[h]=MonMapData(this,m_pathnames[i]);
             } else
             {
                 m_h.push_back(NULL);
@@ -168,7 +179,7 @@ public:
         close(m_msg_send);
     }
 
-    void Callback(const wxString *mon_dir, int EventType, const wxString &uri)
+    void Callback(const wxString &mon_dir, int EventType, const wxString &uri)
     {
         int action=0;
         switch(EventType)
@@ -189,15 +200,15 @@ public:
         }
         if(action&m_notifyfilter)
         {
-            wxDirectoryMonitorEvent e(mon_dir->c_str(),action,uri);
+            wxDirectoryMonitorEvent e(mon_dir.c_str(),action,uri);
             m_parent->AddPendingEvent(e);
         }
     }
 
-    static void MonitorCallback(GFileMonitor *handle,GFile *monitor_uri,GFile *info_uri,GFileMonitorEvent event_type,gpointer user_data)
+    static void MonitorCallback(GFileMonitor *handle, GFile *file, GFile *other_file, GFileMonitorEvent event_type,gpointer user_data)
     {
         if(m.find(handle)!=m.end())
-            m[handle]->Callback((wxString *)user_data, event_type, wxString::FromUTF8(g_file_get_path(info_uri)));
+            m[handle].m_monitor->Callback(m[handle].m_path, event_type, wxString::FromUTF8(g_file_get_path(file)));
         //TODO: ELSE WARNING/ERROR
     }
     void UpdatePaths(const wxArrayString &paths)

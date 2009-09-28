@@ -754,7 +754,7 @@ public:
             m[lpOverlapped]->ReadChanges(dwErrorCode, dwNumberOfBytesTransfered, lpOverlapped);
         else
         {
-            wxMessageBox(_("Cleaning up deleted handle"));
+//            wxMessageBox(_("Cleaning up deleted handle"));
             delete lpOverlapped; ///Should be creating a new lpOverlapped for each call of ReadDirectoryChangesW (i.e. this is safe)
         }
     }

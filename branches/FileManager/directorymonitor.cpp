@@ -467,6 +467,49 @@ public:
 
 #include <map>
 typedef std::map<LPOVERLAPPED, DirMonitorThread *> CallbackMap;
+
+//typedef std::map<LPOVERLAPPED, MonData> CallbackMap;
+//
+//struct MonData
+//{
+//    wxString m_path;
+//    HANDLE *m_handle;
+//    LPOVERLAPPED m_overlapped;
+//    PFILE_NOTIFY_INFORMATION m_changdata;
+//    DirMonitorThread *m_monitor;
+//    MonData()
+//    {
+//        m_path=_("");
+//        m_monitor=NULL;
+//        m_overlapped=NULL;
+//        m_changedata=NULL;
+//    }
+//    MonData(DirMonitorThread *monitor, const wxString &path)
+//    {
+//        m_monitor=monitor;
+//        m_path=path.c_str();
+//        m_overlapped=new_overlapped();
+//        m_changedata=(PFILE_NOTIFY_INFORMATION)(new char[4096]);
+//    }
+//    ~MonMapData()
+//    {
+//        if(m_overlapped)
+//            delete m_overlapped;
+//        if(m_changedata)
+//            delete m_changedata;
+//    }
+//    static OVERLAPPED *new_overlapped()
+//    {
+//        OVERLAPPED *o=new OVERLAPPED;
+//        o->Internal=0;
+//        o->InternalHigh=0;
+//        o->Offset=0;
+//        o->OffsetHigh=0;
+//        o->hEvent=NULL;
+//        return o;
+//    }
+//};
+
 static CallbackMap m;
 
 //WIN32 ONLY THREADED CLASS TO HANDLE WAITING ON DIR CHANGES ASYNCHRONOUSLY
@@ -711,8 +754,8 @@ public:
             m[lpOverlapped]->ReadChanges(dwErrorCode, dwNumberOfBytesTransfered, lpOverlapped);
         else
         {
-//            wxMessageBox(_("Cleaning up deleted handle"));
-            delete lpOverlapped;
+            wxMessageBox(_("Cleaning up deleted handle"));
+            delete lpOverlapped; ///Should be creating a new lpOverlapped for each call of ReadDirectoryChangesW (i.e. this is safe)
         }
     }
 

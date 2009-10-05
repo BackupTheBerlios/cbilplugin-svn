@@ -466,51 +466,28 @@ public:
 
 
 #include <map>
-typedef std::map<LPOVERLAPPED, DirMonitorThread *> CallbackMap;
 
-//typedef std::map<LPOVERLAPPED, MonData> CallbackMap;
-//
-//struct MonData
-//{
-//    wxString m_path;
-//    HANDLE *m_handle;
-//    LPOVERLAPPED m_overlapped;
-//    PFILE_NOTIFY_INFORMATION m_changdata;
-//    DirMonitorThread *m_monitor;
-//    MonData()
-//    {
-//        m_path=_("");
-//        m_monitor=NULL;
-//        m_overlapped=NULL;
-//        m_changedata=NULL;
-//    }
-//    MonData(DirMonitorThread *monitor, const wxString &path)
-//    {
-//        m_monitor=monitor;
-//        m_path=path.c_str();
-//        m_overlapped=new_overlapped();
-//        m_changedata=(PFILE_NOTIFY_INFORMATION)(new char[4096]);
-//    }
-//    ~MonMapData()
-//    {
-//        if(m_overlapped)
-//            delete m_overlapped;
-//        if(m_changedata)
-//            delete m_changedata;
-//    }
-//    static OVERLAPPED *new_overlapped()
-//    {
-//        OVERLAPPED *o=new OVERLAPPED;
-//        o->Internal=0;
-//        o->InternalHigh=0;
-//        o->Offset=0;
-//        o->OffsetHigh=0;
-//        o->hEvent=NULL;
-//        return o;
-//    }
-//};
+// Structure contains all of the data required to monitor a single directory
+struct MonData
+{
+    OVERLAPPED m_overlapped;
+    wxString m_path;
+    HANDLE m_handle;
+    PFILE_NOTIFY_INFORMATION m_changedata;
+    DirMonitorThread *m_monitor;
+    bool m_fail;
+    bool m_cancel;
+    MonData();
+    MonData(DirMonitorThread *monitor, const wxString &path, bool subtree);
+    void ReadCancel();
+    void ReadRequest(bool subtree);
+    ~MonData();
+    static OVERLAPPED new_overlapped();
+};
 
-static CallbackMap m;
+// watched directories are maintained as a map by pathname
+typedef std::map<wxString,MonData*> MonMap;
+
 
 //WIN32 ONLY THREADED CLASS TO HANDLE WAITING ON DIR CHANGES ASYNCHRONOUSLY
 class DirMonitorThread : public wxThread
@@ -519,15 +496,15 @@ public:
     DirMonitorThread(wxEvtHandler *parent, wxArrayString pathnames, bool singleshot, bool subtree, DWORD notifyfilter, DWORD waittime_ms)
         : wxThread(wxTHREAD_JOINABLE)
     {
-        m_interrupt_event[0]=CreateEvent(NULL, FALSE, FALSE, NULL);
-        m_interrupt_event[1]=CreateEvent(NULL, FALSE, FALSE, NULL);
+        m_interrupt_event[0]=CreateEvent(NULL, FALSE, FALSE, NULL); //used to signal update path request
+        m_interrupt_event[1]=CreateEvent(NULL, FALSE, FALSE, NULL); //used to signal quit request
 
         m_parent=parent;
         m_waittime=waittime_ms;
         m_subtree=subtree;
         m_singleshot=singleshot;
         for(unsigned int i=0;i<pathnames.GetCount();i++)
-            m_pathnames.Add(pathnames[i].c_str());
+            m_update_paths.Add(pathnames[i].c_str());
         m_notifyfilter=notifyfilter;
         return;
 
@@ -552,135 +529,70 @@ public:
         wxArrayString update_paths;
         for(unsigned int i=0;i<m_update_paths.GetCount();i++)
             update_paths.Add(m_update_paths[i].c_str());
-        HANDLE *handles=new HANDLE[update_paths.GetCount()];
-        LPOVERLAPPED *overlapped=new LPOVERLAPPED[update_paths.GetCount()];
-        PFILE_NOTIFY_INFORMATION *changedata=new PFILE_NOTIFY_INFORMATION[update_paths.GetCount()];
 
-        for(size_t i=0;i<m_pathnames.GetCount();i++)
+        for(MonMap::iterator it=m_monmap.begin();it!=m_monmap.end();++it)
         {
-            int index=update_paths.Index(m_pathnames[i]);
-            if(index==wxNOT_FOUND && m_handles[i]!=INVALID_HANDLE_VALUE)
+            int index=update_paths.Index(it->first);
+            if(index==wxNOT_FOUND)
             {
-                ::CancelIo(m_handles[i]);
-                ::CloseHandle(m_handles[i]);
-                delete m_changedata[i];
-                m.erase(m_overlapped[i]);
+                it->second->ReadCancel(); //request cancel. will be removed from the map
+                if(it->second->m_fail)
+                {
+                    delete it->second;
+                    m_monmap.erase(it);
+                }
             }
         }
         for(size_t i=0;i<update_paths.GetCount();i++)
         {
-            int index=m_pathnames.Index(update_paths[i]);
-            if(index!=wxNOT_FOUND)
+            MonMap::iterator it=m_monmap.find(update_paths[i]);
+            if(it==m_monmap.end())
             {
-                handles[i]=m_handles[index];
-                changedata[i]=m_changedata[index];
-                overlapped[i]=m_overlapped[index];
-//                m.erase(m_overlapped[index]);
-//                m[overlapped[i]]=this;
-            }
-            else
-            {
-                handles[i] = ::CreateFile(update_paths[i].c_str(),FILE_LIST_DIRECTORY,FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,NULL,OPEN_EXISTING,FILE_FLAG_BACKUP_SEMANTICS|FILE_FLAG_OVERLAPPED,NULL);
-                if(handles[i]==INVALID_HANDLE_VALUE)
-                {
-//                    wxMessageBox(wxString::Format(_("handle failed on create %i"),GetLastError()));
-                    continue;
-                }
-                overlapped[i]=new_overlapped();
-                m[overlapped[i]]=this;
-                changedata[i]=(PFILE_NOTIFY_INFORMATION)(new char[4096]);
-                if(!::ReadDirectoryChangesW(handles[i], changedata[i], 4096, m_subtree, DEFAULT_MONITOR_FILTER_WIN32, NULL, overlapped[i], this->FileIOCompletionRoutine))
-                {
-//                    wxMessageBox(wxString::Format(_("handle failed on readchanges %i"),GetLastError()));
-                    continue;
-                }
+                MonData *md=new MonData(this,update_paths[i],m_subtree);
+                if(md->m_fail)
+                    delete md;
+                else
+                    m_monmap[update_paths[i]]=md;
             }
         }
-        delete [] m_handles;
-        delete [] m_overlapped;
-        delete [] m_changedata;
-        m_handles=handles;
-        m_overlapped=overlapped;
-        m_changedata=changedata;
-        m_pathnames=update_paths;
         m_interrupt_mutex2.Unlock();
-        for(size_t i=0;i<m_pathnames.GetCount();i++)
-        {
-            if(m_handles[i]==INVALID_HANDLE_VALUE)
-            {
-//                wxMessageBox(_("ERROR: Invalid handle"));
-                return false;
-            }
-        }
         return true;
     }
 
-    static OVERLAPPED *new_overlapped()
-    {
-        OVERLAPPED *o=new OVERLAPPED;
-        o->Internal=0;
-        o->InternalHigh=0;
-        o->Offset=0;
-        o->OffsetHigh=0;
-        o->hEvent=NULL;
-        return o;
-    }
     void *Entry()
     {
-        bool handle_fail=false;
-        m_handles=new HANDLE[m_pathnames.GetCount()];
-        m_overlapped=new LPOVERLAPPED[m_pathnames.GetCount()];
-        m_changedata=new PFILE_NOTIFY_INFORMATION[m_pathnames.GetCount()];
-        for(unsigned int i=0;i<m_pathnames.GetCount() &&!TestDestroy();i++)
-        {
-            m_handles[i] = ::CreateFile(m_pathnames[i].c_str(),FILE_LIST_DIRECTORY,FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,NULL,OPEN_EXISTING,FILE_FLAG_BACKUP_SEMANTICS|FILE_FLAG_OVERLAPPED,NULL);
-            if(m_handles[i]==INVALID_HANDLE_VALUE)
-            {
-                handle_fail=true;
-                continue;
-            }
-            m_overlapped[i]=new_overlapped();
-            m[m_overlapped[i]]=this;
-            m_changedata[i]=(PFILE_NOTIFY_INFORMATION)(new char[4096]);
-            if(!::ReadDirectoryChangesW(m_handles[i], m_changedata[i], 4096, m_subtree, DEFAULT_MONITOR_FILTER_WIN32, NULL, m_overlapped[i], this->FileIOCompletionRoutine))
-            {
-                handle_fail=true;
-                //wxMessageBox(_("handle failed on readchanges"));
-                continue;
-            }
-        }
+        UpdatePathsThread();
+        bool kill_request=false;
         //TODO: Error checking
-        while(!handle_fail && !TestDestroy())
+        while(!(kill_request && m_monmap.size()==0)) //don't exit until we have gracefully closed all of the directory monitors
         {
             DWORD result=::WaitForMultipleObjectsEx(2,m_interrupt_event,false,INFINITE,true);
             if(result==WAIT_FAILED || result==WAIT_ABANDONED_0)
-                break;
-            if(result==WAIT_OBJECT_0+1)
-                break;
+                break; //most likely will cause crash if this happens
+            if(result==WAIT_OBJECT_0+1 && !kill_request)
+            {
+                kill_request=true;
+                for(MonMap::iterator it=m_monmap.begin();it!=m_monmap.end();++it)
+                {
+                    it->second->ReadCancel();
+                    if(it->second->m_fail)
+                    {
+                        delete it->second;
+                        m_monmap.erase(it);
+                    }
+                }
+            }
             if(result==WAIT_OBJECT_0)
             {
                 m_interrupt_mutex2.Lock();
-                if(!UpdatePathsThread())
-                    handle_fail=true;
+                UpdatePathsThread();
                 ResetEvent(m_interrupt_event[0]);
                 m_interrupt_mutex2.Unlock();
             }
             if(m_singleshot)
                 break;
         }
-        for(unsigned int i=0;i<m_pathnames.GetCount();i++)
-        {
-            if(m_handles[i]!=INVALID_HANDLE_VALUE)
-            {
-                ::CancelIo(m_handles[i]);
-                ::CloseHandle(m_handles[i]);
-                delete m_changedata[i];
-                delete m_overlapped[i];
-            }
-        }
-        delete [] m_changedata;
-        delete [] m_overlapped;
-        delete [] m_handles;
+        //wxMessageBox(_("quitting monitor"));
 //        wxDirectoryMonitorEvent e(wxEmptyString,MONITOR_FINISHED,wxEmptyString);
 //        m_parent->AddPendingEvent(e);
         return NULL;
@@ -695,17 +607,27 @@ public:
         CloseHandle(m_interrupt_event[0]);
         CloseHandle(m_interrupt_event[1]);
     }
-    void ReadChanges(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered, LPOVERLAPPED lpOverlapped)
+    void ReadChanges(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered, MonData *mondata)
     {
 //        wxMessageBox(wxString::Format(_("%i"),dwErrorCode));
         //TODO: Error checking - dwErrorCode should be zero, then need to check other error conditions
         int off=0;
         unsigned int i=0;
-        for(;i<m_pathnames.GetCount();i++)
-            if(lpOverlapped==m_overlapped[i])
-                break;
-        PFILE_NOTIFY_INFORMATION chptr=m_changedata[i];
-        if(dwNumberOfBytesTransfered>0 && i<m_pathnames.GetCount())
+//        if(mondata->m_cancel && dwNumberOfBytesTransfered>0)
+//            wxMessageBox(wxString::Format(_("message, code %i, bytes %i, path %s"),dwErrorCode, dwNumberOfBytesTransfered,mondata->m_path.c_str()));
+        if(dwNumberOfBytesTransfered==0) //mondata->m_cancel ||
+        {
+            //wxMessageBox(_("canceling i/o ")+mondata->m_path);
+            MonMap::iterator it=m_monmap.find(mondata->m_path);
+            if(it!=m_monmap.end())
+            {
+                delete it->second;
+                m_monmap.erase(it);
+            }
+            return;
+        }
+        PFILE_NOTIFY_INFORMATION chptr=&mondata->m_changedata[i];
+        if(dwNumberOfBytesTransfered>0)
         do
         {
             DWORD a=chptr->Action;
@@ -728,7 +650,7 @@ public:
             if(action&m_notifyfilter)
             {
                 wxString filename(chptr->FileName,chptr->FileNameLength/2); //TODO: check the div by 2
-                wxDirectoryMonitorEvent e(m_pathnames[i],action,filename);
+                wxDirectoryMonitorEvent e(mondata->m_path,action,filename);
                 m_parent->AddPendingEvent(e);
             }
             off=chptr->NextEntryOffset;
@@ -737,26 +659,16 @@ public:
         else
         {
             //too many changes, tell parent to manually read the directory
-            wxDirectoryMonitorEvent e(m_pathnames[i],MONITOR_TOO_MANY_CHANGES,wxEmptyString);
+            wxDirectoryMonitorEvent e(mondata->m_path,MONITOR_TOO_MANY_CHANGES,wxEmptyString);
             m_parent->AddPendingEvent(e);
 
         }
-        delete m_overlapped[i];
-        m_overlapped[i]=new_overlapped();
-        delete m_changedata[i];
-        m_changedata[i]=(PFILE_NOTIFY_INFORMATION)(new char[4096]);
-        ::ReadDirectoryChangesW(m_handles[i], m_changedata[i], 4096, m_subtree, DEFAULT_MONITOR_FILTER_WIN32, NULL, m_overlapped[i], this->FileIOCompletionRoutine);
+        mondata->ReadRequest(m_subtree);
     }
     static VOID CALLBACK FileIOCompletionRoutine(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered, LPOVERLAPPED lpOverlapped)
     {
-//        wxMessageBox(_("IO Complete"));
-        if(m.find(lpOverlapped)!=m.end())
-            m[lpOverlapped]->ReadChanges(dwErrorCode, dwNumberOfBytesTransfered, lpOverlapped);
-        else
-        {
-//            wxMessageBox(_("Cleaning up deleted handle"));
-            delete lpOverlapped; ///Should be creating a new lpOverlapped for each call of ReadDirectoryChangesW (i.e. this is safe)
-        }
+        MonData *mondata=(MonData*)lpOverlapped;
+        mondata->m_monitor->ReadChanges(dwErrorCode, dwNumberOfBytesTransfered, mondata);
     }
 
     HANDLE m_interrupt_event[2];
@@ -764,14 +676,97 @@ public:
     DWORD m_waittime;
     bool m_subtree;
     bool m_singleshot;
-    wxArrayString m_pathnames;
+    MonMap m_monmap;
     wxArrayString m_update_paths;
     DWORD m_notifyfilter;
-    HANDLE *m_handles;
-    LPOVERLAPPED *m_overlapped;
-    PFILE_NOTIFY_INFORMATION *m_changedata;
     wxEvtHandler *m_parent;
 };
+
+
+//MonData implementations
+MonData::MonData()
+{
+    std::cout<<"creating empty mondata"<<std::endl;
+    m_path=_("");
+    m_monitor=NULL;
+    m_changedata=NULL;
+    m_handle=NULL;
+    m_fail=false;
+    m_cancel=false;
+}
+MonData::MonData(DirMonitorThread *monitor, const wxString &path, bool subtree)
+{
+    std::cout<<"creating mondata"<<std::endl;
+    MonData();
+    m_monitor=monitor;
+    m_path=path.c_str();
+    m_handle=::CreateFile(path.c_str(),FILE_LIST_DIRECTORY,FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,NULL,OPEN_EXISTING,FILE_FLAG_BACKUP_SEMANTICS|FILE_FLAG_OVERLAPPED,NULL);
+    if(m_handle!=INVALID_HANDLE_VALUE)
+    {
+        m_overlapped=new_overlapped();
+        m_changedata=(PFILE_NOTIFY_INFORMATION)(new char[4096]);
+        ReadRequest(subtree);
+    } else
+    {
+        wxMessageBox(_("WARNING: Failed to open handle for ")+m_path);
+        m_handle=NULL;
+        m_fail=true;
+    }
+    std::cout<<"created empty mondata"<<m_path.ToAscii()<<std::endl;
+}
+void MonData::ReadCancel()
+{
+    if(!m_fail && m_handle!=NULL)
+    {
+        if(!::CancelIo(m_handle))
+        {
+            wxMessageBox(_("WARNING: Failed to initiate cancel io for ")+m_path);
+            m_fail=true;
+        }
+        else
+            m_cancel=true;
+    }
+}
+
+void MonData::ReadRequest(bool subtree)
+{
+    if(!::ReadDirectoryChangesW(m_handle, m_changedata, 4096, subtree, DEFAULT_MONITOR_FILTER_WIN32, NULL, &m_overlapped, m_monitor->FileIOCompletionRoutine))
+    {
+        m_fail=true;
+        wxMessageBox(_("WARNING: Failed to initiate read request for ")+m_path);
+    }
+    else
+    {
+        m_fail=false;
+    }
+}
+MonData::~MonData()
+{
+    std::cout<<"deleting "<<m_path.ToAscii()<<std::endl;
+    if(m_handle)
+    {
+        if(!::CloseHandle(m_handle))
+        {
+            std::cout<<"failed to close handle"<<std::endl;
+            wxMessageBox(_("WARNING: Failed to close monitor handle for ")+m_path);
+        }
+        else
+            std::cout<<"closed handle"<<std::endl;
+    }
+    if(m_changedata)
+        delete m_changedata;
+}
+OVERLAPPED MonData::new_overlapped()
+{
+    OVERLAPPED o;
+    o.Internal=0;
+    o.InternalHigh=0;
+    o.Offset=0;
+    o.OffsetHigh=0;
+    o.hEvent=NULL;
+    return o;
+}
+
 
 #endif
 

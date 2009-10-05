@@ -150,7 +150,7 @@ bool FileExplorerUpdater::GetCurrentState(const wxString &path)
             }
             if(deli>=0)
                 sa.RemoveAt(deli);
-            if(!WildCardListMatch(m_wildcard,filename))
+            if(!WildCardListMatch(m_wildcard,filename,true))
                 match=false;
         }
         if(match)

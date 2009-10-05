@@ -82,13 +82,13 @@ public:
     DirTraverseFind(const wxString& wildcard) : m_files(), m_wildcard(wildcard) { }
     virtual wxDirTraverseResult OnFile(const wxString& filename)
     {
-        if(WildCardListMatch(m_wildcard,filename))
+        if(WildCardListMatch(m_wildcard,filename,true))
             m_files.Add(filename);
         return wxDIR_CONTINUE;
     }
     virtual wxDirTraverseResult OnDir(const wxString& dirname)
     {
-        if(WildCardListMatch(m_wildcard,dirname))
+        if(WildCardListMatch(m_wildcard,dirname,true))
             m_files.Add(dirname);
         return wxDIR_CONTINUE;
     }
@@ -211,6 +211,7 @@ private:
 
 BEGIN_EVENT_TABLE(FileTreeCtrl, wxTreeCtrl)
 //    EVT_TREE_ITEM_ACTIVATED(ID_FILETREE, FileTreeCtrl::OnActivate)  //double click -
+    EVT_KEY_DOWN(FileTreeCtrl::OnKeyDown)
 END_EVENT_TABLE()
 
 IMPLEMENT_DYNAMIC_CLASS(FileTreeCtrl, wxTreeCtrl)
@@ -227,6 +228,16 @@ FileTreeCtrl::FileTreeCtrl(wxWindow *parent): wxTreeCtrl(parent) {}
 
 FileTreeCtrl::~FileTreeCtrl()
 {
+}
+
+void FileTreeCtrl::OnKeyDown(wxKeyEvent &event)
+{
+    if(event.GetKeyCode()==WXK_DELETE)
+    {
+        ::wxPostEvent(GetParent(),event);
+//        event.Skip(true);
+//        event.Allow();
+    }
 }
 
 int FileTreeCtrl::OnCompareItems(const wxTreeItemId& item1, const wxTreeItemId& item2)
@@ -265,6 +276,7 @@ BEGIN_EVENT_TABLE(FileExplorer, wxPanel)
     EVT_MENU(ID_FILEPARSEBZR,FileExplorer::OnParseBZR)
     EVT_MENU(ID_FILEREFRESH,FileExplorer::OnRefresh)
     EVT_MENU(ID_FILEADDTOPROJECT,FileExplorer::OnAddToProject)
+    EVT_KEY_DOWN(FileExplorer::OnKeyDown)
     EVT_TREE_ITEM_EXPANDING(ID_FILETREE, FileExplorer::OnExpand)
     //EVT_TREE_ITEM_COLLAPSED(id, func) //delete the children
     EVT_TREE_ITEM_ACTIVATED(ID_FILETREE, FileExplorer::OnActivate)  //double click - open file / expand folder (the latter is a default just need event.skip)
@@ -281,6 +293,7 @@ FileExplorer::FileExplorer(wxWindow *parent,wxWindowID id,
     long style, const wxString& name):
     wxPanel(parent,id,pos,size,style, name)
 {
+    m_kill=false;
     m_update_queue=new UpdateQueue;
     m_updater=NULL;
     m_updatetimer=new wxTimer(this,ID_UPDATETIMER);
@@ -336,6 +349,7 @@ FileExplorer::FileExplorer(wxWindow *parent,wxWindowID id,
 
 FileExplorer::~FileExplorer()
 {
+    m_kill=true;
     m_updatetimer->Stop();
     delete m_dir_monitor;
     WriteConfig();
@@ -551,6 +565,8 @@ void FileExplorer::ResetDirMonitor()
 
 void FileExplorer::OnDirMonitor(wxDirectoryMonitorEvent &e)
 {
+    if(m_kill)
+        return;
     //LogMessage(wxString::Format(_T("Dir Event: %s,%i,%s"),e.m_mon_dir.c_str(),e.m_event_type,e.m_info_uri.c_str()));
     if(e.m_event_type==MONITOR_TOO_MANY_CHANGES)
     {
@@ -568,6 +584,8 @@ static int up_count=0;
 
 void FileExplorer::OnTimerCheckUpdates(wxTimerEvent &e)
 {
+    if(m_kill)
+        return;
     if(m_update_active)
         return;
     wxTreeItemId ti;
@@ -599,6 +617,8 @@ bool FileExplorer::ValidateRoot()
 
 void FileExplorer::OnUpdateTreeItems(wxCommandEvent &e)
 {
+    if(m_kill)
+        return;
     m_updater->Wait();
     wxTreeItemId ti=m_updated_node;
 //    cbMessageBox(_T("Update Returned"));
@@ -752,7 +772,7 @@ bool FileExplorer::AddTreeItems(const wxTreeItemId &ti)
             if(deli>=0)
                 sa.RemoveAt(deli);
 //            cbMessageBox(filename);
-            if(!WildCardListMatch(wildcard,filename))
+            if(!WildCardListMatch(wildcard,filename,true))
                 match=false;
         }
         if(match)
@@ -1075,6 +1095,7 @@ void FileExplorer::OnActivate(wxTreeEvent &event)
     wxString filename=GetFullPath(event.GetItem());
     if(m_Tree->GetItemImage(event.GetItem())==fvsFolder)
     {
+        event.Skip(true);
 //        if(!SetRootFolder(filename)) // this causes crash...
 //            return;
 //        m_Loc->Insert(m_root,0);
@@ -1113,6 +1134,17 @@ void FileExplorer::OnActivate(wxTreeEvent &event)
 //        em->Open(file);
 
 }
+
+
+void FileExplorer::OnKeyDown(wxKeyEvent &event)
+{
+    if(event.GetKeyCode()==WXK_DELETE)
+    {
+        wxCommandEvent event;
+        OnDelete(event);
+    }
+}
+
 
 void FileExplorer::OnRightClick(wxTreeEvent &event)
 {
@@ -1248,6 +1280,7 @@ void FileExplorer::OnNewFolder(wxCommandEvent &event)
 
 void FileExplorer::OnDuplicate(wxCommandEvent &event)
 {
+    m_ticount=m_Tree->GetSelections(m_selectti);
     for(int i=0;i<m_ticount;i++)
     {
         wxFileName path(GetFullPath(m_selectti[i]));  //SINGLE: m_Tree->GetSelection()
@@ -1328,6 +1361,7 @@ void FileExplorer::OnCopy(wxCommandEvent &event)
     wxDirDialog dd(this,_T("Copy to"));
     dd.SetPath(GetFullPath(m_Tree->GetRootItem()));
     wxArrayString selectedfiles;
+    m_ticount=m_Tree->GetSelections(m_selectti);
     for(int i=0;i<m_ticount;i++) // really important not to rely on TreeItemId ater modal dialogs because file updates can change the file tree in the background.
     {
         selectedfiles.Add(GetFullPath(m_selectti[i]));  //SINGLE: m_Tree->GetSelection()
@@ -1366,6 +1400,7 @@ void FileExplorer::OnMove(wxCommandEvent &event)
 {
     wxDirDialog dd(this,_T("Move to"));
     wxArrayString selectedfiles;
+    m_ticount=m_Tree->GetSelections(m_selectti);
     for(int i=0;i<m_ticount;i++)
         selectedfiles.Add(GetFullPath(m_selectti[i]));  //SINGLE: m_Tree->GetSelection()
     dd.SetPath(GetFullPath(m_Tree->GetRootItem()));
@@ -1376,13 +1411,30 @@ void FileExplorer::OnMove(wxCommandEvent &event)
     //TODO: Reselect item in new location?? (what if outside root scope?)
 }
 
-void FileExplorer::OnDelete(wxCommandEvent &event)
+wxArrayString FileExplorer::GetSelectedPaths()
 {
-    if(MessageBox(m_Tree,_T("Are you sure?"),_T("Delete"),wxYES_NO)!=wxID_YES)
-        return;
+    wxArrayString paths;
     for(int i=0;i<m_ticount;i++)
     {
         wxString path(GetFullPath(m_selectti[i]));  //SINGLE: m_Tree->GetSelection()
+        paths.Add(path);
+    }
+    return paths;
+}
+
+void FileExplorer::OnDelete(wxCommandEvent &event)
+{
+    m_ticount=m_Tree->GetSelections(m_selectti);
+    wxArrayString as=GetSelectedPaths();
+    wxString prompt=_("Your are about to delete\n\n");
+    for(int i=0;i<as.Count();i++)
+        prompt+=as[i]+_("\n");
+    prompt+=_T("\nAre you sure?");
+    if(MessageBox(m_Tree,prompt,_T("Delete"),wxYES_NO)!=wxID_YES)
+        return;
+    for(int i=0;i<as.Count();i++)
+    {
+        wxString path=as[i];  //SINGLE: m_Tree->GetSelection()
         if(wxFileName::FileExists(path))
         {
             //        EditorManager* em = Manager::Get()->GetEditorManager();

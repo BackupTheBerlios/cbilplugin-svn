@@ -49,6 +49,7 @@ public: //wxTR_HIDE_ROOT|
         const wxString& name = _T("treeCtrl"));
     FileTreeCtrl();
     FileTreeCtrl(wxWindow *parent);
+    void OnKeyDown(wxKeyEvent &e);
 //    void OnActivate(wxTreeEvent &event);
     virtual ~FileTreeCtrl();
 //    void SortChildren(const wxTreeItemId& ti);
@@ -103,6 +104,7 @@ private:
     void OnRefresh(wxCommandEvent &event);
     void OnBeginDragTreeItem(wxTreeEvent &event);
     void OnEndDragTreeItem(wxTreeEvent &event);
+    void OnKeyDown(wxKeyEvent &event);
 
     void OnAddToProject(wxCommandEvent &event);
 
@@ -118,6 +120,7 @@ private:
     void WriteConfig();
     void ReadConfig();
 
+    wxArrayString GetSelectedPaths();
     bool ParseBZRstate(const wxString &path, VCSstatearray &sa);
     bool ParseHGstate(const wxString &path, VCSstatearray &sa);
     bool ParseCVSstate(const wxString &path, VCSstatearray &sa);
@@ -168,6 +171,7 @@ private:
     bool m_parse_svn;
     bool m_parse_hg;
     bool m_parse_bzr;
+    bool m_kill;
     DECLARE_EVENT_TABLE()
 };
 

@@ -22,18 +22,22 @@ bool DirIsChildOf(const wxString &path, const wxString &child)
 }
 
 
-bool WildCardListMatch(wxString list, wxString name)
+bool WildCardListMatch(wxString list, wxString name, bool strip)
 {
     if(list==_T("")) //any empty list matches everything by default
         return true;
     wxString wildlist=list;
     wxString wild=list.BeforeFirst(';');
+    if(strip)
+        wild=wild.Strip(wxString::both);
     while(wildlist!=_T(""))
     {
         if(wild!=_T("") && ::wxMatchWild(wild,name))
             return true;
         wildlist=wildlist.AfterFirst(';');
         wild=wildlist.BeforeFirst(';');
+        if(strip)
+            wild=wild.Strip(wxString::both);
     }
     return false;
 }

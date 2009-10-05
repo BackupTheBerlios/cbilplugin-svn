@@ -679,11 +679,7 @@ void FileExplorer::OnUpdateTreeItems(wxCommandEvent &e)
         m_update_expand=true;
         m_Tree->Expand(ti);
     }
-    m_update_active=false;
-    // Restart the monitor (TODO: move this elsewhere??)
-    ResetDirMonitor();
     //RESTART THE TIMER
-    m_updatetimer->Start(10,true);
 //    else
 //    {
 //        //TODO: Should not need to do anything here (see OnDirMonitor)
@@ -700,6 +696,10 @@ void FileExplorer::OnUpdateTreeItems(wxCommandEvent &e)
     m_updater->Delete();
     m_updater=NULL;
     up_count++;
+    m_update_active=false;
+    m_updatetimer->Start(10,true);
+    // Restart the monitor (TODO: move this elsewhere??)
+    ResetDirMonitor();
 }
 
 bool FileExplorer::AddTreeItems(const wxTreeItemId &ti)

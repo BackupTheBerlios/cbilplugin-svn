@@ -485,6 +485,7 @@ struct MonData
     static OVERLAPPED new_overlapped();
 };
 
+
 // watched directories are maintained as a map by pathname
 typedef std::map<wxString,MonData*> MonMap;
 
@@ -617,6 +618,12 @@ public:
 //            wxMessageBox(wxString::Format(_("message, code %i, bytes %i, path %s"),dwErrorCode, dwNumberOfBytesTransfered,mondata->m_path.c_str()));
         if(dwNumberOfBytesTransfered==0) //mondata->m_cancel ||
         {
+            std::cout<<"LOG: FileIOCompletionRoutine Cancel "<<mondata->m_path.ToAscii()<<std::endl;
+            if(!mondata->m_cancel)
+            {
+                std::cout<<"LOG: FileIOCompletionRoutine Cancel Fail "<<mondata->m_path.ToAscii()<<std::endl;
+                wxMessageBox(_("FileManager Directory Monitory is about to have a serious problem!"));
+            }
             //wxMessageBox(_("canceling i/o ")+mondata->m_path);
             MonMap::iterator it=m_monmap.find(mondata->m_path);
             if(it!=m_monmap.end())
@@ -663,11 +670,13 @@ public:
             m_parent->AddPendingEvent(e);
 
         }
+        std::cout<<"LOG: FileIOCompletionRoutine Read Request Restart "<<mondata->m_path.ToAscii()<<std::endl;
         mondata->ReadRequest(m_subtree);
     }
     static VOID CALLBACK FileIOCompletionRoutine(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered, LPOVERLAPPED lpOverlapped)
     {
         MonData *mondata=(MonData*)lpOverlapped;
+        std::cout<<"LOG: FileIOCompletionRoutine Fired "<<mondata->m_path.ToAscii()<<std::endl;
         mondata->m_monitor->ReadChanges(dwErrorCode, dwNumberOfBytesTransfered, mondata);
     }
 
@@ -686,7 +695,7 @@ public:
 //MonData implementations
 MonData::MonData()
 {
-    std::cout<<"creating empty mondata"<<std::endl;
+    std::cout<<"LOG: creating empty monitor structure"<<std::endl;
     m_path=_("");
     m_monitor=NULL;
     m_changedata=NULL;
@@ -694,9 +703,10 @@ MonData::MonData()
     m_fail=false;
     m_cancel=false;
 }
+
 MonData::MonData(DirMonitorThread *monitor, const wxString &path, bool subtree)
 {
-    std::cout<<"creating mondata"<<std::endl;
+    std::cout<<"LOG: creating monitor for path "<<path.ToAscii()<<std::endl;
     MonData();
     m_monitor=monitor;
     m_path=path.c_str();
@@ -705,27 +715,34 @@ MonData::MonData(DirMonitorThread *monitor, const wxString &path, bool subtree)
     {
         m_overlapped=new_overlapped();
         m_changedata=(PFILE_NOTIFY_INFORMATION)(new char[4096]);
+        std::cout<<"LOG: successfully created monitor "<<m_path.ToAscii()<<std::endl;
         ReadRequest(subtree);
     } else
     {
         wxMessageBox(_("WARNING: Failed to open handle for ")+m_path);
+        std::cout<<"ERROR: created failed monitor "<<m_path.ToAscii()<<std::endl;
         m_handle=NULL;
         m_fail=true;
     }
-    std::cout<<"created empty mondata"<<m_path.ToAscii()<<std::endl;
 }
+
 void MonData::ReadCancel()
 {
     if(!m_fail && m_handle!=NULL)
     {
         if(!::CancelIo(m_handle))
         {
+            std::cout<<"ERROR: read cancel failed for "<<m_path.ToAscii()<<std::endl;
             wxMessageBox(_("WARNING: Failed to initiate cancel io for ")+m_path);
             m_fail=true;
         }
         else
+        {
+            std::cout<<"LOG: read cancel succeeded for "<<m_path.ToAscii()<<std::endl;
             m_cancel=true;
-    }
+        }
+    } else
+        std::cout<<"LOG: redundant monitor read cancel request for "<<m_path.ToAscii()<<std::endl;
 }
 
 void MonData::ReadRequest(bool subtree)
@@ -733,29 +750,34 @@ void MonData::ReadRequest(bool subtree)
     if(!::ReadDirectoryChangesW(m_handle, m_changedata, 4096, subtree, DEFAULT_MONITOR_FILTER_WIN32, NULL, &m_overlapped, m_monitor->FileIOCompletionRoutine))
     {
         m_fail=true;
+        std::cout<<"ERROR: read changes failed for "<<m_path.ToAscii()<<std::endl;
         wxMessageBox(_("WARNING: Failed to initiate read request for ")+m_path);
     }
     else
     {
+        std::cout<<"LOG: read changes initiated for "<<m_path.ToAscii()<<std::endl;
         m_fail=false;
     }
 }
+
 MonData::~MonData()
 {
-    std::cout<<"deleting "<<m_path.ToAscii()<<std::endl;
+    std::cout<<"LOG: deleting monitor to "<<m_path.ToAscii()<<std::endl;
     if(m_handle)
     {
         if(!::CloseHandle(m_handle))
         {
-            std::cout<<"failed to close handle"<<std::endl;
+            std::cout<<"ERROR: failed to close handle for "<<m_path.ToAscii()<<std::endl;
             wxMessageBox(_("WARNING: Failed to close monitor handle for ")+m_path);
         }
         else
-            std::cout<<"closed handle"<<std::endl;
+            std::cout<<"LOG: closed handle for "<<m_path.ToAscii()<<std::endl;
     }
     if(m_changedata)
         delete m_changedata;
+    std::cout<<"LOG: succesfully delete monitor for "<<m_path.ToAscii()<<std::endl;
 }
+
 OVERLAPPED MonData::new_overlapped()
 {
     OVERLAPPED o;

@@ -50,7 +50,7 @@
 					<Variable name="WX_CFG" value="" />
 				</Environment>
 			</Target>
-			<Target title="nightly">
+			<Target title="plugin-binary">
 				<Option output=".\plugin\PowerShell" prefix_auto="1" extension_auto="1" />
 				<Option working_dir=".\plugin" />
 				<Option object_output=".\objs" />
@@ -81,8 +81,8 @@
 					<Add directory="$(#wx.lib)\gcc_dll$(WX_CFG)\msw$(WX_SUFFIX)" />
 				</Compiler>
 				<Linker>
-					<Add library="c:\cbnightly\codeblocks.dll" />
-					<Add library="C:\cbnightly\wxmsw28u_gcc_cb.dll" />
+					<Add library="$(#cb_bin)\codeblocks.dll" />
+					<Add library="$(#cb_bin)\wxmsw28u_gcc_cb.dll" />
 				</Linker>
 				<ExtraCommands>
 					<Add after="strip plugin\PowerShell.dll" />

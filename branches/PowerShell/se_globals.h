@@ -13,7 +13,7 @@ wxString GetParentDir(const wxString &path);
 
 bool DirIsChildOf(const wxString &path, const wxString &child);
 
-bool WildCardListMatch(wxString list, wxString name);
+bool WildCardListMatch(wxString list, wxString name, bool strip=true);
 
 bool PromptSaveOpenFile(wxString message, wxFileName path);
 

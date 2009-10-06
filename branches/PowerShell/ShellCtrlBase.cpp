@@ -235,7 +235,7 @@ ShellManager::ShellManager(wxWindow* parent)
     m_synctimer.SetOwner(this, ID_SHELLPOLLTIMER);
     wxBoxSizer* bs = new wxBoxSizer(wxVERTICAL);
 #ifdef CB_AUI
-    m_nb = new wxAuiNotebook(this, ID_SHELLMGR, wxDefaultPosition, wxDefaultSize, wxAUI_NB_CLOSE_ON_ACTIVE_TAB);
+    m_nb = new wxAuiNotebook(this, ID_SHELLMGR, wxDefaultPosition, wxDefaultSize, wxAUI_NB_SCROLL_BUTTONS|wxAUI_NB_CLOSE_ON_ACTIVE_TAB);
 #else
     m_nb = new wxFlatNotebook(this, ID_SHELLMGR, wxDefaultPosition, wxDefaultSize, wxFNB_X_ON_TAB|wxFNB_NO_X_BUTTON);
 #endif

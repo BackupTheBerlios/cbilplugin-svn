@@ -616,13 +616,13 @@ public:
         unsigned int i=0;
 //        if(mondata->m_cancel && dwNumberOfBytesTransfered>0)
 //            wxMessageBox(wxString::Format(_("message, code %i, bytes %i, path %s"),dwErrorCode, dwNumberOfBytesTransfered,mondata->m_path.c_str()));
-        if(dwNumberOfBytesTransfered==0) //mondata->m_cancel ||
+        if(dwNumberOfBytesTransfered==0 || dwErrorCode>0) //mondata->m_cancel ||
         {
             std::cout<<"LOG: FileIOCompletionRoutine Cancel "<<mondata->m_path.ToAscii()<<std::endl;
             if(!mondata->m_cancel)
             {
                 std::cout<<"LOG: FileIOCompletionRoutine Cancel Fail "<<mondata->m_path.ToAscii()<<std::endl;
-                wxMessageBox(_("FileManager Directory Monitory is about to have a serious problem!"));
+//                wxMessageBox(_("FileManager Directory Monitory is about to have a serious problem!"));
             }
             //wxMessageBox(_("canceling i/o ")+mondata->m_path);
             MonMap::iterator it=m_monmap.find(mondata->m_path);
@@ -676,7 +676,7 @@ public:
     static VOID CALLBACK FileIOCompletionRoutine(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered, LPOVERLAPPED lpOverlapped)
     {
         MonData *mondata=(MonData*)lpOverlapped;
-        std::cout<<"LOG: FileIOCompletionRoutine Fired "<<mondata->m_path.ToAscii()<<std::endl;
+        std::cout<<"LOG: FileIOCompletionRoutine Fired "<<mondata->m_path.ToAscii()<<" code "<<dwErrorCode<<" bytes "<<dwNumberOfBytesTransfered<<std::endl;
         mondata->m_monitor->ReadChanges(dwErrorCode, dwNumberOfBytesTransfered, mondata);
     }
 

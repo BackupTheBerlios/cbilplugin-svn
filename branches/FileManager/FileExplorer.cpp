@@ -13,8 +13,12 @@
 #include <sdk.h>
 
 #include <vector>
+#include <iostream>
+
 
 #include "se_globals.h"
+
+
 
 #include <wx/arrimpl.cpp> // this is a magic incantation which must be done!
 WX_DEFINE_OBJARRAY(VCSstatearray);
@@ -584,19 +588,27 @@ static int up_count=0;
 
 void FileExplorer::OnTimerCheckUpdates(wxTimerEvent &e)
 {
+    std::cout<<"start check OnTimerCheckUpdates"<<std::endl;
     if(m_kill)
         return;
     if(m_update_active)
         return;
+    std::cout<<"start OnTimerCheckUpdates"<<std::endl;
     wxTreeItemId ti;
-    if(m_update_queue->Pop(ti))
+    while(m_update_queue->Pop(ti))
     {
+        if(!ti.IsOk())
+            continue;
         m_updater_cancel=false;
         m_updater=new FileExplorerUpdater(this);
         m_updated_node=ti;
         m_update_active=true;
+        std::cout<<"begin update call OnTimerCheckUpdates"<<std::endl;
         m_updater->Update(m_updated_node);
+        std::cout<<"end update call OnTimerCheckUpdates"<<std::endl;
+        break;
     }
+    std::cout<<"end OnTimerCheckUpdates"<<std::endl;
 }
 
 bool FileExplorer::ValidateRoot()
@@ -617,6 +629,7 @@ bool FileExplorer::ValidateRoot()
 
 void FileExplorer::OnUpdateTreeItems(wxCommandEvent &e)
 {
+    std::cout<<"start OnUpdateTreeItems"<<std::endl;
     if(m_kill)
         return;
     m_updater->Wait();
@@ -700,6 +713,7 @@ void FileExplorer::OnUpdateTreeItems(wxCommandEvent &e)
     m_updatetimer->Start(10,true);
     // Restart the monitor (TODO: move this elsewhere??)
     ResetDirMonitor();
+    std::cout<<"end OnUpdateTreeItems"<<std::endl;
 }
 
 bool FileExplorer::AddTreeItems(const wxTreeItemId &ti)
@@ -851,6 +865,8 @@ wxString FileExplorer::GetFullPath(const wxTreeItemId &ti)
         std::vector<wxTreeItemId> vti;
         vti.push_back(ti);
         wxTreeItemId pti=m_Tree->GetItemParent(vti[0]);
+        if(!pti.IsOk())
+            return wxEmptyString;
         while(pti!=m_Tree->GetRootItem())
         {
             vti.insert(vti.begin(),pti);

@@ -118,7 +118,7 @@ bool ShellManager::QueryClose(ShellCtrlBase* sh)
 long ShellManager::LaunchProcess(const wxString &processcmd, const wxString &name, const wxString &type, const wxArrayString &options)
 {
     int id=wxNewId();
-    ShellCtrlBase *shell=GlobalShellRegistry.CreateControl(type,m_nb,id,name,this);
+    ShellCtrlBase *shell=GlobalShellRegistry.CreateControl(type,this,id,name,this);
     if(!shell)
     {
         cbMessageBox(wxString::Format(_T("Console type %s not found in registry."),type.c_str()));
@@ -136,9 +136,9 @@ long ShellManager::LaunchProcess(const wxString &processcmd, const wxString &nam
         delete shell; //TODO: GlobalShellRegistry.FreeControl() ???
         return -1;
     }
+    shell->Show();
     m_nb->AddPage(shell,name);
     m_nb->SetSelection(m_nb->GetPageCount()-1);
-    shell->Show();
     return procid;
 }
 

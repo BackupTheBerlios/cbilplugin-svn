@@ -1,5 +1,15 @@
 #include "se_globals.h"
 
+
+
+
+
+
+
+
+
+
+
 wxString GetParentDir(const wxString &path)
 {
     wxString parent=wxFileName(parent).GetPath(0);

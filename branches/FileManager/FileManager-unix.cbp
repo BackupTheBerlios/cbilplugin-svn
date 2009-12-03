@@ -65,7 +65,6 @@
 			<Add option="-Wall" />
 			<Add option="-g" />
 			<Add option="`wx-config --cflags`" />
-			<Add option="`pkg-config --cflags gnome-vfs-2.0`" />
 			<Add option="`pkg-config --cflags gio-2.0`" />
 			<Add option="-fmessage-length=0" />
 			<Add option="-fexceptions" />
@@ -81,7 +80,6 @@
 		</Compiler>
 		<Linker>
 			<Add option="`wx-config --libs`" />
-			<Add option="`pkg-config --libs gnome-vfs-2.0`" />
 			<Add option="`pkg-config --libs gio-2.0`" />
 			<Add library="codeblocks" />
 			<Add directory="../../../devel" />

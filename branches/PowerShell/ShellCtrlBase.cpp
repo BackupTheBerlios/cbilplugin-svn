@@ -136,9 +136,9 @@ long ShellManager::LaunchProcess(const wxString &processcmd, const wxString &nam
         delete shell; //TODO: GlobalShellRegistry.FreeControl() ???
         return -1;
     }
-    shell->Show();
     m_nb->AddPage(shell,name);
     m_nb->SetSelection(m_nb->GetPageCount()-1);
+//    shell->Show();
     return procid;
 }
 
@@ -176,7 +176,7 @@ void ShellManager::RemoveDeadPages()
         ShellCtrlBase *shell=GetPage(i);
         if(shell->IsDead())
 #ifdef CB_AUI
-            m_nb->RemovePage(i);
+            m_nb->DeletePage(i);
 #else
             m_nb->RemovePage(i,false);
 #endif

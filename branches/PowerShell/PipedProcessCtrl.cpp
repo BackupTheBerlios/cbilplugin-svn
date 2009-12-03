@@ -94,6 +94,7 @@ void PipedProcessCtrl::KillProcess()
 //        return;
 //    }
     long pid=GetPid();
+#ifdef __WXGTK__
     if(m_killlevel==0)
     {
         m_killlevel=1;
@@ -108,6 +109,12 @@ void PipedProcessCtrl::KillProcess()
             wxProcess::Kill(pid,wxSIGKILL);
         }
     }
+#else
+    if(wxProcess::Exists(pid))
+    {
+        wxProcess::Kill(pid,wxSIGKILL);
+    }
+#endif //__WXGTK__
 }
 
 wxString PipedProcessCtrl::LinkRegexDefault=

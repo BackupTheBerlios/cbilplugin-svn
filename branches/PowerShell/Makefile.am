@@ -1,7 +1,8 @@
 INCLUDES = $(WX_CXXFLAGS) \
 		-I$(top_srcdir)/src/include \
 		-I$(top_srcdir)/src/include/wxscintilla/include \
-		-I$(top_srcdir)/src/include/wxFlatNotebook/include
+
+CXXFLAGS = @CXXFLAGS@ -DCB_AUI
 
 pluginlibdir = $(pkglibdir)/plugins
 pkgdata_DATA = PowerShell.zip

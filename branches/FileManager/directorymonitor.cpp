@@ -82,9 +82,16 @@ public:
 //        GError *err;
 //        gsize read;
         read(mon->m_msg_rcv, &c, 1);
-//        GIOStatus s=g_io_channel_read_chars(mon->m_msg_rcv, &c, 1, &read, &err);
-        mon->UpdatePathsThread();
-        mon->m_interrupt_mutex.Unlock();
+        switch(c)
+        {
+            case 'm':
+                mon->UpdatePathsThread();
+                mon->m_interrupt_mutex.Unlock();
+                break;
+            case 'q':
+                g_main_loop_quit(loop);
+                break;
+        }
         return true;
     }
     void UpdatePathsThread()
@@ -178,7 +185,9 @@ public:
         m_interrupt_mutex.Lock();
         m_active=false
         m_interrupt_mutex.Unlock();
-        g_main_loop_quit(loop); //todo: is this thread-safe?? could send a quit message on the pipe
+        char m='q';
+        gsize num;
+        write(m_msg_send,&m,1);
         if(IsRunning())
             Wait();//Delete();
         close(m_msg_rcv);

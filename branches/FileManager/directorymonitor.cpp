@@ -50,6 +50,7 @@ public:
     DirMonitorThread(wxEvtHandler *parent, wxArrayString pathnames, bool singleshot, bool subtree, int notifyfilter, int waittime_ms)
         : wxThread(wxTHREAD_JOINABLE)
     {
+        m_active=false;
         m_parent=parent;
         m_waittime=waittime_ms;
         m_subtree=subtree;
@@ -148,6 +149,7 @@ public:
             }
         }
         //TODO: Add a timer for killing singleshot instances
+        m_active=true;
         m_interrupt_mutex.Unlock();
 
         g_main_loop_run(loop);
@@ -167,12 +169,16 @@ public:
         GIOStatus s=g_io_channel_shutdown(m_msg_rcv_c, true, &err);
 
         g_main_context_unref(context);
+        g_main_loop_unref(loop);
         m_interrupt_mutex.Unlock();
         return NULL;
     }
     ~DirMonitorThread()
     {
-        g_main_loop_quit(loop);
+        m_interrupt_mutex.Lock();
+        m_active=false
+        m_interrupt_mutex.Unlock();
+        g_main_loop_quit(loop); //todo: is this thread-safe?? could send a quit message on the pipe
         if(IsRunning())
             Wait();//Delete();
         close(m_msg_rcv);
@@ -214,6 +220,8 @@ public:
     void UpdatePaths(const wxArrayString &paths)
     {
         m_interrupt_mutex.Lock();
+        if(!m_active)
+            return false
         m_update_paths.Empty();
         for(unsigned int i=0;i<paths.GetCount();i++)
             m_update_paths.Add(paths[i].c_str());
@@ -237,6 +245,7 @@ public:
     int m_msg_send;
     GIOChannel *m_msg_rcv_c;
     bool m_thread_notify;
+    bool m_active;
     wxMutex m_interrupt_mutex;
     GMainContext *context;
     GMainLoop *loop;

@@ -86,12 +86,12 @@ public:
         {
             case 'm':
                 mon->UpdatePathsThread();
-                mon->m_interrupt_mutex.Unlock();
                 break;
             case 'q':
                 g_main_loop_quit(loop);
                 break;
         }
+        mon->m_interrupt_mutex.Unlock();
         return true;
     }
     void UpdatePathsThread()

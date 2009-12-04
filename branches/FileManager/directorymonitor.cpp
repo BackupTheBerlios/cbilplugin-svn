@@ -103,6 +103,7 @@ public:
             if(index==wxNOT_FOUND && m_h[i])
             {
                 g_file_monitor_cancel(m_h[i]);
+                g_object_unref(m_h[i]);
                 m.erase(m_h[i]);
             }
         }

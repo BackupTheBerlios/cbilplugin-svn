@@ -88,11 +88,15 @@ public:
                 mon->UpdatePathsThread();
                 break;
             case 'q':
-                g_main_loop_quit(loop);
+                mon->Quit();
                 break;
         }
         mon->m_interrupt_mutex.Unlock();
         return true;
+    }
+    void Quit()
+    {
+        g_main_loop_quit(loop);
     }
     void UpdatePathsThread()
     {
@@ -184,7 +188,7 @@ public:
     ~DirMonitorThread()
     {
         m_interrupt_mutex.Lock();
-        m_active=false
+        m_active=false;
         m_interrupt_mutex.Unlock();
         char m='q';
         gsize num;
@@ -231,7 +235,7 @@ public:
     {
         m_interrupt_mutex.Lock();
         if(!m_active)
-            return false
+            return;
         m_update_paths.Empty();
         for(unsigned int i=0;i<paths.GetCount();i++)
             m_update_paths.Add(paths[i].c_str());

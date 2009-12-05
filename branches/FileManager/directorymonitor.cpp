@@ -161,6 +161,7 @@ public:
         m_active=true;
         m_interrupt_mutex.Unlock();
 
+        UpdatePathsThread(fd);
 
         bool quit=false;
         m_active_count=0;
@@ -248,40 +249,17 @@ public:
         return NULL;
     }
 
-    void Finish()
+    virtual ~DirMonitorThread()
     {
         m_interrupt_mutex.Lock();
         m_active=false;
-        std::cout<<"quitting dir monitor thread"<<std::endl;
         char m='q';
         write(m_msg_send,&m,1);
         m_interrupt_mutex.Unlock();
         if(IsRunning())
-        {
-            std::cout<<"waiting on quit message"<<std::endl;
             Wait();//Delete();
-        } else std::cout<<"no wait required"<<std::endl;
         close(m_msg_rcv);
         close(m_msg_send);
-    }
-
-    virtual ~DirMonitorThread()
-    {
-//        m_interrupt_mutex.Lock();
-//        m_active=false;
-////        g_main_loop_quit(loop);
-//        std::cout<<"quitting dir monitor thread"<<std::endl;
-//        char m='q';
-//        m_msg_bytes_queued++;
-//        write(m_msg_send,&m,1);
-//        m_interrupt_mutex.Unlock();
-//        if(IsRunning())
-//        {
-//            std::cout<<"waiting on quit message"<<std::endl;
-//            Wait();//Delete();
-//        } else std::cout<<"no wait required"<<std::endl;
-//        close(m_msg_rcv);
-//        close(m_msg_send);
     }
 
     void UpdatePaths(const wxArrayString &paths)
@@ -1214,9 +1192,5 @@ void wxDirectoryMonitor::ChangePaths(const wxArrayString &uri)
 
 wxDirectoryMonitor::~wxDirectoryMonitor()
 {
-    std::cout<<"finishing monitor"<<std::endl;
-    m_monitorthread->Finish();
-    std::cout<<"finished monitor, now deleting"<<std::endl;
     delete m_monitorthread;
-    std::cout<<"deleted monitor"<<std::endl;
 }

@@ -361,6 +361,7 @@ FileExplorer::~FileExplorer()
     WriteConfig();
     UpdateAbort();
     delete m_update_queue;
+    delete m_updatetimer;
 }
 
 
@@ -573,7 +574,7 @@ void FileExplorer::OnDirMonitor(wxDirectoryMonitorEvent &e)
 {
     if(m_kill)
         return;
-    //LogMessage(wxString::Format(_T("Dir Event: %s,%i,%s"),e.m_mon_dir.c_str(),e.m_event_type,e.m_info_uri.c_str()));
+//    LogMessage(wxString::Format(_T("Dir Event: %s,%i,%s"),e.m_mon_dir.c_str(),e.m_event_type,e.m_info_uri.c_str()));
     if(e.m_event_type==MONITOR_TOO_MANY_CHANGES)
     {
 //        LogMessage(_("directory change read error"));
@@ -641,7 +642,7 @@ void FileExplorer::OnUpdateTreeItems(wxCommandEvent &e)
     { //NODE WAS DELETED - REFRESH NOW!
         //TODO: Should only need to clean up and restart the timer (no need to change queue)
         LogMessage(wxString::Format(_("Cancelling update %i"),up_count));
-        m_updater->Delete();
+        delete m_updater;
         m_updater=NULL;
         m_update_active=false;
         ResetDirMonitor();
@@ -708,7 +709,7 @@ void FileExplorer::OnUpdateTreeItems(wxCommandEvent &e)
 ////        else //TODO: Replace this with a directory monitor
 ////            m_updatetimer->Start(3000,true);
 //    }
-    m_updater->Delete();
+    delete m_updater;
     m_updater=NULL;
     up_count++;
     m_update_active=false;

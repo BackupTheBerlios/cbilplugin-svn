@@ -51,7 +51,7 @@ void FileManagerPlugin::OnRelease(bool appShutDown)
         int idx = Manager::Get()->GetProjectManager()->GetNotebook()->GetPageIndex(m_fe);
         if (idx != -1)
             Manager::Get()->GetProjectManager()->GetNotebook()->RemovePage(idx);
-        m_fe->Destroy();
+        delete m_fe;
     }
     m_fe = 0;
 }

@@ -26,6 +26,299 @@ wxDirectoryMonitorEvent::wxDirectoryMonitorEvent(const wxDirectoryMonitorEvent& 
 
 #include <map>
 
+#ifdef __FAM__
+
+#include <fam.h>
+#include <sys/time.h>
+
+//struct MonData
+//{
+//    int fr;
+//    wxString path;
+//}
+
+typedef std::map<FAMRequest, wxString> MonMap;
+
+struct MonDescriptors
+{
+    MonDescriptors(int event_pipe)
+    {
+        FAMOpen(&fc);
+        read_pipe=event_pipe;
+    }
+    ~MonDescriptors()
+    {
+        FAMClose(&fc);
+    }
+    int pipe_set()
+    {
+        return FD_ISSET(read_pipe,&readset);
+    }
+    int fam_set()
+    {
+        return FD_ISSET(famfd(),&readset);
+    }
+    int nfds()
+    {
+        return famfd()>read_pipe?famfd()+1:read_pipe+1;
+    }
+    int famfd()
+    {
+        return FAMCONNECTION_GETFD(&fc);
+    }
+    FAMConnection *fam()
+    {
+        return &fc;
+    }
+    int do_select()
+    {
+        int result;
+        do {
+           FD_ZERO(&readset);
+           FD_SET(famfd(), &readset);
+           FD_SET(read_pipe, &readset);
+           result = select(nfds(), &readset, NULL, NULL, NULL);
+        } while (false);//result == -1 && errno == EINTR);
+        if(result>0)
+        {
+            if (FD_ISSET(famfd(), &readset))
+                return 1;
+            if (FD_ISSET(read_pipe, &readset))
+                return 2;
+        }
+        return -1;
+    }
+    FAMConnection fc;
+    int read_pipe;
+    fd_set readset;
+};
+
+
+class DirMonitorThread : public wxThread
+{
+public:
+    DirMonitorThread(wxEvtHandler *parent, wxArrayString pathnames, bool singleshot, bool subtree, int notifyfilter, int waittime_ms)
+        : wxThread(wxTHREAD_JOINABLE)
+    {
+        m_active=false;
+        m_parent=parent;
+        m_waittime=waittime_ms;
+        m_subtree=subtree;
+        m_singleshot=singleshot;
+        for(unsigned int i=0;i<pathnames.GetCount();i++)
+            m_pathnames.Add(pathnames[i].c_str());
+        m_notifyfilter=notifyfilter;
+        int pipehandles[2];
+        pipe(pipehandles);
+        m_msg_rcv=pipehandles[0];
+        m_msg_send=pipehandles[1];
+        return;
+    }
+    void UpdatePathsThread(MonDescriptors &fd)
+    {
+        std::vector<FAMRequest *> new_h(m_update_paths.GetCount(),NULL); //TODO: initialize vector size
+        for(size_t i=0;i<m_pathnames.GetCount();i++) //delete monitors that aren't needed
+        {
+            int index=m_update_paths.Index(m_pathnames[i]);
+            if(index==wxNOT_FOUND)
+            {
+                if(m_h[i])
+                {
+                    FAMCancelMonitor(fd.fam(),m_h[i]);
+                    //m_active_count--;
+                    delete m_h[i];
+                }
+            }
+        }
+        for(size_t i=0;i<m_update_paths.GetCount();i++) // copy existing monitors and add new ones
+        {
+            int index=m_pathnames.Index(m_update_paths[i]);
+            if(index!=wxNOT_FOUND)
+            {
+                new_h[i]=m_h[index];
+            }
+            else
+            {
+                FAMRequest *fr=new FAMRequest;
+                if(FAMMonitorDirectory(fd.fam(),m_update_paths[i].ToUTF8(),fr,new wxString(m_update_paths[i].c_str()))>=0)
+                {
+                    new_h[i]=fr;
+                    m_active_count++;
+                } else
+                    delete fr;
+            }
+        }
+        m_h=new_h; //replace the old with the new
+        m_pathnames=m_update_paths;
+    }
+    void *Entry()
+    {
+        MonDescriptors fd(m_msg_rcv);
+
+        m_interrupt_mutex.Lock();
+        m_thread_notify=false;
+        //TODO: Add a timer for killing singleshot instances
+        m_active=true;
+        m_interrupt_mutex.Unlock();
+
+
+        bool quit=false;
+        m_active_count=0;
+        while(!(quit && m_active_count==0))
+        {
+            int result=fd.do_select();
+            if(result<0)
+                break; //todo: error handling
+            if(fd.fam_set())
+            {
+                while(FAMPending(fd.fam()))
+                {
+                    FAMEvent fe;
+                    int result=FAMNextEvent(fd.fam(), &fe);
+                    if(result>0)
+                    {
+                        wxString target_path=wxString::FromUTF8(fe.filename);
+                        int action=0;
+                        switch(fe.code)
+                        {
+                            //FAMStartExecuting, FAMStopExecuting, FAMAcknowledge
+                            case FAMChanged:
+                                action=MONITOR_FILE_CHANGED;
+                                break;
+                            case FAMDeleted:
+                            case FAMMoved:
+                                action=MONITOR_FILE_DELETED;
+                                break;
+                            case FAMCreated:
+                                action=MONITOR_FILE_CREATED;
+                                break;
+                            case FAMEndExist:
+                            case FAMExists:
+                                break;
+                            case FAMAcknowledge:
+                                std::cout<<"cancellation acknowledgment ";
+                                if(fe.userdata)
+                                {
+                                    std::cout<<((wxString*)fe.userdata)->c_str();
+                                    delete (wxString*)fe.userdata;
+                                }
+                                std::cout<<std::endl;
+                                m_active_count--;
+                                break;
+//                            case ?????:
+//                                action=MONITOR_FILE_ATTRIBUTES;
+//                                break;
+                        }
+                        if(action&m_notifyfilter)
+                        {
+                            wxDirectoryMonitorEvent e(((wxString *)(fe.userdata))->c_str(),action,target_path.c_str());
+                            m_parent->AddPendingEvent(e);
+                        }
+
+                    }
+                }
+
+
+            }
+            if(fd.pipe_set())
+            {
+                char c;
+                read(m_msg_rcv, &c, 1);
+                std::cout<<"received message "<<c<<std::endl;
+                switch(c)
+                {
+                    case 'm':
+                        UpdatePathsThread(fd);
+                        break;
+                    case 'q':
+                        quit=true;
+                        m_interrupt_mutex.Lock();
+                        m_active=false;
+                        m_update_paths.Empty();
+                        m_interrupt_mutex.Unlock();
+                        UpdatePathsThread(fd);
+                        break;
+                }
+            }
+        }
+
+
+        std::cout<<"monitor main loop ended"<<std::endl;
+
+        return NULL;
+    }
+
+    void Finish()
+    {
+        m_interrupt_mutex.Lock();
+        m_active=false;
+        std::cout<<"quitting dir monitor thread"<<std::endl;
+        char m='q';
+        write(m_msg_send,&m,1);
+        m_interrupt_mutex.Unlock();
+        if(IsRunning())
+        {
+            std::cout<<"waiting on quit message"<<std::endl;
+            Wait();//Delete();
+        } else std::cout<<"no wait required"<<std::endl;
+        close(m_msg_rcv);
+        close(m_msg_send);
+    }
+
+    virtual ~DirMonitorThread()
+    {
+//        m_interrupt_mutex.Lock();
+//        m_active=false;
+////        g_main_loop_quit(loop);
+//        std::cout<<"quitting dir monitor thread"<<std::endl;
+//        char m='q';
+//        m_msg_bytes_queued++;
+//        write(m_msg_send,&m,1);
+//        m_interrupt_mutex.Unlock();
+//        if(IsRunning())
+//        {
+//            std::cout<<"waiting on quit message"<<std::endl;
+//            Wait();//Delete();
+//        } else std::cout<<"no wait required"<<std::endl;
+//        close(m_msg_rcv);
+//        close(m_msg_send);
+    }
+
+    void UpdatePaths(const wxArrayString &paths)
+    {
+        m_interrupt_mutex.Lock();
+        if(!m_active)
+        {
+            m_interrupt_mutex.Unlock();
+            return;
+        }
+        m_update_paths.Empty();
+        for(unsigned int i=0;i<paths.GetCount();i++)
+            m_update_paths.Add(paths[i].c_str());
+        char m='m';
+        write(m_msg_send,&m,1);
+        std::cout<<"sent thread a message "<<m<<std::endl;
+        m_interrupt_mutex.Unlock();
+
+    }
+    int m_active_count;
+    int m_msg_rcv;
+    int m_msg_send;
+    bool m_thread_notify;
+    bool m_active;
+    wxMutex m_interrupt_mutex;
+    int m_waittime;
+    bool m_subtree;
+    bool m_singleshot;
+    wxArrayString m_pathnames, m_update_paths;
+    int m_notifyfilter;
+    MonMap m_monmap;
+    std::vector<FAMRequest *> m_h;
+    wxEvtHandler *m_parent;
+};
+
+#endif //__FAM__
+
 #ifdef __GIO__
 
 #include <gio/gio.h>
@@ -63,6 +356,7 @@ public:
         m_msg_rcv=pipehandles[0];
         m_msg_send=pipehandles[1];
         m_msg_rcv_c=g_io_channel_unix_new(pipehandles[0]);
+        m_msg_bytes_queued=0;
 //        write(m_msg_send,"ab",2);
 //        char d='1';
 //        read(m_msg_rcv,&d,1);
@@ -77,25 +371,30 @@ public:
     static gboolean tn_callback(GIOChannel *channel, GIOCondition cond, gpointer data)
     {
         DirMonitorThread *mon=(DirMonitorThread *)data;
+        std::cout<<"tn_callback received message "<<mon->m_msg_bytes_queued<<std::endl;
         mon->m_interrupt_mutex.Lock();
         char c;
 //        GError *err;
 //        gsize read;
-        read(mon->m_msg_rcv, &c, 1);
-        std::cout<<"tn_callback received message"<<c<<std::endl;
-        switch(c)
+        while(mon->m_msg_bytes_queued>0)
         {
-            case 'm':
-                mon->UpdatePathsThread();
-                break;
-            case 'q':
-                mon->Quit();
-                break;
+            read(mon->m_msg_rcv, &c, 1);
+            mon->m_msg_bytes_queued--;
+            std::cout<<"tn_callback received message "<<c<<"bytes queued"<<mon->m_msg_bytes_queued<<std::endl;
+            switch(c)
+            {
+                case 'm':
+                    mon->UpdatePathsThread();
+                    break;
+                case 'q':
+                    mon->QuitMainLoop();
+                    break;
+            }
         }
         mon->m_interrupt_mutex.Unlock();
         return true;
     }
-    void Quit()
+    void QuitMainLoop()
     {
         g_main_loop_quit(loop);
     }
@@ -167,6 +466,8 @@ public:
 
         g_main_loop_run(loop);
 
+        std::cout<<"monitor main loop ended"<<std::endl;
+
         m_interrupt_mutex.Lock();
         for(unsigned int i=0;i<m_pathnames.GetCount();i++)
         {
@@ -178,27 +479,51 @@ public:
             }
         }
 
-        GError *err=NULL;
-        GIOStatus s=g_io_channel_shutdown(m_msg_rcv_c, true, &err);
+//        GError *err=NULL;
+//        GIOStatus s=g_io_channel_shutdown(m_msg_rcv_c, true, &err);
 
         g_main_context_unref(context);
         g_main_loop_unref(loop);
         m_interrupt_mutex.Unlock();
         return NULL;
     }
-    ~DirMonitorThread()
+
+    void Finish()
     {
+        m_interrupt_mutex.Lock();
         m_active=false;
-        g_main_loop_quit(loop);
-//        std::cout<<"quitting dir monitor thread"<<std::endl;
-////        m_interrupt_mutex.Lock();
-////        m_interrupt_mutex.Unlock();
-//        char m='q';
-//        write(m_msg_send,&m,1);
+//        g_main_loop_quit(loop);
+        std::cout<<"quitting dir monitor thread"<<std::endl;
+        char m='q';
+        m_msg_bytes_queued++;
+        write(m_msg_send,&m,1);
+        m_interrupt_mutex.Unlock();
         if(IsRunning())
+        {
+            std::cout<<"waiting on quit message"<<std::endl;
             Wait();//Delete();
+        } else std::cout<<"no wait required"<<std::endl;
         close(m_msg_rcv);
         close(m_msg_send);
+    }
+
+    virtual ~DirMonitorThread()
+    {
+//        m_interrupt_mutex.Lock();
+//        m_active=false;
+////        g_main_loop_quit(loop);
+//        std::cout<<"quitting dir monitor thread"<<std::endl;
+//        char m='q';
+//        m_msg_bytes_queued++;
+//        write(m_msg_send,&m,1);
+//        m_interrupt_mutex.Unlock();
+//        if(IsRunning())
+//        {
+//            std::cout<<"waiting on quit message"<<std::endl;
+//            Wait();//Delete();
+//        } else std::cout<<"no wait required"<<std::endl;
+//        close(m_msg_rcv);
+//        close(m_msg_send);
     }
 
     void Callback(const wxString &mon_dir, int EventType, const wxString &uri)
@@ -237,7 +562,10 @@ public:
     {
         m_interrupt_mutex.Lock();
         if(!m_active)
+        {
+            m_interrupt_mutex.Unlock();
             return;
+        }
         m_update_paths.Empty();
         for(unsigned int i=0;i<paths.GetCount();i++)
             m_update_paths.Add(paths[i].c_str());
@@ -245,7 +573,9 @@ public:
         //GIOStatus s=g_io_channel_write_unichar(m_msg_send, 'm',&err);
         char m='m';
         gsize num;
+        m_msg_bytes_queued++;
         write(m_msg_send,&m,1);
+        std::cout<<"sent thread a message "<<m<<" bytes queued "<<m_msg_bytes_queued<<std::endl;
         //flush(m_msg_send);
 //        GIOStatus s=g_io_channel_write_chars(m_msg_send, &m, 1, &num,&err);
 //        if(s!=G_IO_STATUS_NORMAL)
@@ -259,6 +589,7 @@ public:
 
     int m_msg_rcv;
     int m_msg_send;
+    int m_msg_bytes_queued;
     GIOChannel *m_msg_rcv_c;
     bool m_thread_notify;
     bool m_active;
@@ -273,7 +604,9 @@ public:
     std::vector<GFileMonitor *> m_h;
     wxEvtHandler *m_parent;
 };
-#else //USE VFS INSTEAD
+#endif
+
+#ifdef __GNOMEVFS__ //USE VFS INSTEAD
 
 #include <libgnomevfs/gnome-vfs.h>
 
@@ -318,9 +651,20 @@ public:
 //        gsize read;
         read(mon->m_msg_rcv, &c, 1);
 //        GIOStatus s=g_io_channel_read_chars(mon->m_msg_rcv, &c, 1, &read, &err);
-        mon->UpdatePathsThread();
+        switch(c)
+        {
+            case "m":
+                mon->UpdatePathsThread();
+                break;
+            case "q":
+                mon->MainLoopExit();
+        }
         mon->m_interrupt_mutex.Unlock();
         return true;
+    }
+    void MainLoopExit()
+    {
+        g_main_loop_quit(loop);
     }
     void UpdatePathsThread()
     {
@@ -383,6 +727,7 @@ public:
         m_interrupt_mutex.Unlock();
 
         g_main_loop_run(loop);
+        std::cout<<"monitor main loop ended"<<std::endl;
 
         m_interrupt_mutex.Lock();
         for(unsigned int i=0;i<m_pathnames.GetCount();i++)
@@ -395,17 +740,24 @@ public:
         }
 
         GError *err=NULL;
-        GIOStatus s=g_io_channel_shutdown(m_msg_rcv_c, true, &err);
 
         g_main_context_unref(context);
         m_interrupt_mutex.Unlock();
+        std::cout<<"returning from monitor thread"<<std::endl;
         return NULL;
     }
-    ~DirMonitorThread()
+    virtual ~DirMonitorThread()
     {
-        g_main_loop_quit(loop);
+        std::cout<<"start dirmonitorthread destructor"<<std::endl;
+        m_active=false;
+//        g_main_loop_quit(loop);
+        char m='q';
+        write(m_msg_send,&m,1);
+
         if(IsRunning())
             Wait();//Delete();
+        GError *err=NULL;
+        GIOStatus s=g_io_channel_shutdown(m_msg_rcv_c, true, &err);
         close(m_msg_rcv);
         close(m_msg_send);
     }
@@ -623,7 +975,7 @@ public:
 //        m_parent->AddPendingEvent(e);
         return NULL;
     }
-    ~DirMonitorThread()
+    virtual ~DirMonitorThread()
     {
         if(IsRunning())
         {
@@ -832,7 +1184,7 @@ wxDirectoryMonitor::wxDirectoryMonitor(wxEvtHandler *parent, const wxArrayString
 {
     //TODO: put init and shutdown in static members
 #ifdef __WXGTK__
-#ifndef __GIO__
+#ifdef __GNOMEVFS__
     if(!gnome_vfs_initialized())
         gnome_vfs_init();
 #endif
@@ -862,7 +1214,9 @@ void wxDirectoryMonitor::ChangePaths(const wxArrayString &uri)
 
 wxDirectoryMonitor::~wxDirectoryMonitor()
 {
-    std::cout<<"deleting monitor"<<std::endl;
+    std::cout<<"finishing monitor"<<std::endl;
+    m_monitorthread->Finish();
+    std::cout<<"finished monitor, now deleting"<<std::endl;
     delete m_monitorthread;
     std::cout<<"deleted monitor"<<std::endl;
 }

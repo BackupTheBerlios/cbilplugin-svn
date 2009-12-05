@@ -74,13 +74,14 @@
 			<Add option="-fPIC" />
 			<Add option="-DcbDEBUG" />
 			<Add option="-DCB_PRECOMP" />
-			<Add option="-D__GIO__" />
+			<Add option="-D__FAM__" />
 			<Add directory="../../../include" />
 			<Add directory="../../../include/wxscintilla/include" />
 		</Compiler>
 		<Linker>
 			<Add option="`wx-config --libs`" />
 			<Add option="`pkg-config --libs gio-2.0`" />
+			<Add option="`pkg-config --libs gamin`" />
 			<Add library="codeblocks" />
 			<Add directory="../../../devel" />
 		</Linker>

@@ -14,6 +14,7 @@ END_EVENT_TABLE()
 
 FileExplorerUpdater::~FileExplorerUpdater()
 {
+    std::cout<<"destructor file explorer updater"<<std::endl;
     if(m_exec_proc)
     {
         m_exec_timer->Stop();

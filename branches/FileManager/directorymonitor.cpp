@@ -82,6 +82,7 @@ public:
 //        GError *err;
 //        gsize read;
         read(mon->m_msg_rcv, &c, 1);
+        std::cout<<"tn_callback received message"<<c<<std::endl;
         switch(c)
         {
             case 'm':
@@ -187,12 +188,13 @@ public:
     }
     ~DirMonitorThread()
     {
-        m_interrupt_mutex.Lock();
         m_active=false;
-        m_interrupt_mutex.Unlock();
-        char m='q';
-        gsize num;
-        write(m_msg_send,&m,1);
+        g_main_loop_quit(loop);
+//        std::cout<<"quitting dir monitor thread"<<std::endl;
+////        m_interrupt_mutex.Lock();
+////        m_interrupt_mutex.Unlock();
+//        char m='q';
+//        write(m_msg_send,&m,1);
         if(IsRunning())
             Wait();//Delete();
         close(m_msg_rcv);
@@ -860,6 +862,7 @@ void wxDirectoryMonitor::ChangePaths(const wxArrayString &uri)
 
 wxDirectoryMonitor::~wxDirectoryMonitor()
 {
-    mon_count++;
+    std::cout<<"deleting monitor"<<std::endl;
     delete m_monitorthread;
+    std::cout<<"deleted monitor"<<std::endl;
 }

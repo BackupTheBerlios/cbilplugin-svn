@@ -353,8 +353,10 @@ FileExplorer::FileExplorer(wxWindow *parent,wxWindowID id,
 
 FileExplorer::~FileExplorer()
 {
+    std::cout<<"file explorer destruction"<<std::endl;
     m_kill=true;
     m_updatetimer->Stop();
+    std::cout<<"pre deleting monitor"<<std::endl;
     delete m_dir_monitor;
     WriteConfig();
     UpdateAbort();

@@ -140,7 +140,7 @@ public:
             else
             {
                 FAMRequest *fr=new FAMRequest;
-                if(FAMMonitorDirectory(fd.fam(),m_update_paths[i].ToUTF8(),fr,new wxString(m_update_paths[i].c_str()))>=0)
+                if(FAMMonitorDirectory(fd.fam(),m_update_paths[i].mb_str(wxConvLocal),fr,new wxString(m_update_paths[i].c_str()))>=0)
                 {
                     new_h[i]=fr;
                     m_active_count++;
@@ -178,7 +178,8 @@ public:
                     int result=FAMNextEvent(fd.fam(), &fe);
                     if(result>0)
                     {
-                        wxString target_path=wxString::FromUTF8(fe.filename);
+                        wxString target_path(fe.filename, wxConvLocal);
+                        //wxString target_path=wxString::FromUTF8(fe.filename);
                         int action=0;
                         switch(fe.code)
                         {

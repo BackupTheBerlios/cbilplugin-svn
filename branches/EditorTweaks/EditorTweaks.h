@@ -91,6 +91,19 @@ class EditorTweaks : public cbPlugin
         void OnKeyPress(wxKeyEvent& event);
         void OnWordWrap(wxCommandEvent &event);
         void OnShowLineNumbers(wxCommandEvent &event);
+        void OnTabChar(wxCommandEvent &event);
+        void OnTabIndent(wxCommandEvent &event);
+        void OnTabSize2(wxCommandEvent &event);
+        void OnTabSize4(wxCommandEvent &event);
+        void OnTabSize6(wxCommandEvent &event);
+        void OnTabSize8(wxCommandEvent &event);
+        void OnShowEOL(wxCommandEvent &event);
+        void OnStripTrailingBlanks(wxCommandEvent &event);
+        void OnEnsureConsistentEOL(wxCommandEvent &event);
+        void OnEOLCRLF(wxCommandEvent &event);
+        void OnEOLCR(wxCommandEvent &event);
+        void OnEOLLF(wxCommandEvent &event);
+
 
 //        void EditorEventHook(cbEditor* editor, wxScintillaEvent& event);
     private:

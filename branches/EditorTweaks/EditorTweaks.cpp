@@ -202,7 +202,7 @@ void EditorTweaks::BuildModuleMenu(const ModuleType type, wxMenu* menu, const Fi
 
     submenu->AppendCheckItem( id_et_ShowEOL, _( "Show EOL Chars" ), _( "Show End-of-Line Characters" ) );
     if(ed->GetControl()->GetViewEOL())
-        submenu->Check(id_et_TabChar,true);
+        submenu->Check(id_et_ShowEOL,true);
 
     submenu->Append( id_et_StripTrailingBlanks, _( "Strip Trailing Blanks Now" ), _( "Strip trailing blanks from each line" ) );
 

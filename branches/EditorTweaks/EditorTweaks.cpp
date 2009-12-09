@@ -277,69 +277,102 @@ void EditorTweaks::OnTabChar(wxCommandEvent &event)
     ed->GetControl()->SetUseTabs(!ed->GetControl()->GetUseTabs());
 }
 
-void EditorTweaks::OnTabIndent(wxCommandEvent &event){    cbEditor* ed = Manager::Get()->GetEditorManager()->GetBuiltinActiveEditor();
+void EditorTweaks::OnTabIndent(wxCommandEvent &event)
+{
+    cbEditor* ed = Manager::Get()->GetEditorManager()->GetBuiltinActiveEditor();
     if(!ed || !ed->GetControl())
         return;
 
     ed->GetControl()->SetTabIndents(!ed->GetControl()->GetTabIndents());
-}
-void EditorTweaks::OnTabSize2(wxCommandEvent &event){    cbEditor* ed = Manager::Get()->GetEditorManager()->GetBuiltinActiveEditor();
+}
+
+void EditorTweaks::OnTabSize2(wxCommandEvent &event)
+{
+    cbEditor* ed = Manager::Get()->GetEditorManager()->GetBuiltinActiveEditor();
     if(!ed || !ed->GetControl())
         return;
 
     ed->GetControl()->SetTabWidth(2);
-}
-void EditorTweaks::OnTabSize4(wxCommandEvent &event){    cbEditor* ed = Manager::Get()->GetEditorManager()->GetBuiltinActiveEditor();
+}
+
+void EditorTweaks::OnTabSize4(wxCommandEvent &event)
+{
+    cbEditor* ed = Manager::Get()->GetEditorManager()->GetBuiltinActiveEditor();
     if(!ed || !ed->GetControl())
         return;
 
     ed->GetControl()->SetTabWidth(4);
-}
-void EditorTweaks::OnTabSize6(wxCommandEvent &event){    cbEditor* ed = Manager::Get()->GetEditorManager()->GetBuiltinActiveEditor();
+}
+
+void EditorTweaks::OnTabSize6(wxCommandEvent &event)
+{
+    cbEditor* ed = Manager::Get()->GetEditorManager()->GetBuiltinActiveEditor();
     if(!ed || !ed->GetControl())
         return;
 
     ed->GetControl()->SetTabWidth(6);
-}
-void EditorTweaks::OnTabSize8(wxCommandEvent &event){    cbEditor* ed = Manager::Get()->GetEditorManager()->GetBuiltinActiveEditor();
+}
+
+void EditorTweaks::OnTabSize8(wxCommandEvent &event)
+{
+    cbEditor* ed = Manager::Get()->GetEditorManager()->GetBuiltinActiveEditor();
     if(!ed || !ed->GetControl())
         return;
 
     ed->GetControl()->SetTabWidth(8);
-}
-void EditorTweaks::OnShowEOL(wxCommandEvent &event){    cbEditor* ed = Manager::Get()->GetEditorManager()->GetBuiltinActiveEditor();
+}
+
+void EditorTweaks::OnShowEOL(wxCommandEvent &event)
+{
+    cbEditor* ed = Manager::Get()->GetEditorManager()->GetBuiltinActiveEditor();
     if(!ed || !ed->GetControl())
         return;
 
     ed->GetControl()->SetViewEOL(!ed->GetControl()->GetViewEOL());
-}
-void EditorTweaks::OnStripTrailingBlanks(wxCommandEvent &event){    cbEditor* ed = Manager::Get()->GetEditorManager()->GetBuiltinActiveEditor();
+}
+
+void EditorTweaks::OnStripTrailingBlanks(wxCommandEvent &event)
+{
+    cbEditor* ed = Manager::Get()->GetEditorManager()->GetBuiltinActiveEditor();
     if(!ed || !ed->GetControl())
         return;
 
     wxMessageBox(_("Not Implemented"));
-}
-void EditorTweaks::OnEnsureConsistentEOL(wxCommandEvent &event){    cbEditor* ed = Manager::Get()->GetEditorManager()->GetBuiltinActiveEditor();
+}
+
+void EditorTweaks::OnEnsureConsistentEOL(wxCommandEvent &event)
+{
+    cbEditor* ed = Manager::Get()->GetEditorManager()->GetBuiltinActiveEditor();
     if(!ed || !ed->GetControl())
         return;
 
     ed->GetControl()->ConvertEOLs(ed->GetControl()->GetEOLMode());
-}
-void EditorTweaks::OnEOLCRLF(wxCommandEvent &event){    cbEditor* ed = Manager::Get()->GetEditorManager()->GetBuiltinActiveEditor();
+}
+
+void EditorTweaks::OnEOLCRLF(wxCommandEvent &event)
+{
+    cbEditor* ed = Manager::Get()->GetEditorManager()->GetBuiltinActiveEditor();
     if(!ed || !ed->GetControl())
         return;
 
     ed->GetControl()->SetEOLMode(wxSCI_EOL_CRLF);
-}
-void EditorTweaks::OnEOLCR(wxCommandEvent &event){    cbEditor* ed = Manager::Get()->GetEditorManager()->GetBuiltinActiveEditor();
+}
+
+void EditorTweaks::OnEOLCR(wxCommandEvent &event)
+{
+    cbEditor* ed = Manager::Get()->GetEditorManager()->GetBuiltinActiveEditor();
     if(!ed || !ed->GetControl())
         return;
 
     ed->GetControl()->SetEOLMode(wxSCI_EOL_CR);
-}
-void EditorTweaks::OnEOLLF(wxCommandEvent &event){    cbEditor* ed = Manager::Get()->GetEditorManager()->GetBuiltinActiveEditor();
+}
+
+void EditorTweaks::OnEOLLF(wxCommandEvent &event)
+{
+    cbEditor* ed = Manager::Get()->GetEditorManager()->GetBuiltinActiveEditor();
     if(!ed || !ed->GetControl())
         return;
 
     ed->GetControl()->SetEOLMode(wxSCI_EOL_LF);
-}
+}
+

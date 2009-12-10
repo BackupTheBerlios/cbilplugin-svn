@@ -35,7 +35,7 @@ class EditorTweaks : public cbPlugin
           * just do nothing ;)
           * @param menuBar the wxMenuBar to create items in
           */
-        virtual void BuildMenu(wxMenuBar* menuBar){}
+        virtual void BuildMenu(wxMenuBar* menuBar);
 
         /** This method is called by Code::Blocks core modules (EditorManager,
           * ProjectManager etc) and is used by the plugin to add any menu
@@ -88,6 +88,11 @@ class EditorTweaks : public cbPlugin
         virtual void OnRelease(bool appShutDown);
 
         void OnEditorOpen(CodeBlocksEvent& event);
+        void OnEditorClose(CodeBlocksEvent& event);
+        void OnEditorUpdateUI(CodeBlocksEvent& event);
+        void OnEditorActivate(CodeBlocksEvent& event);
+        void OnEditorDeactivate(CodeBlocksEvent& event);
+
         void OnKeyPress(wxKeyEvent& event);
         void OnWordWrap(wxCommandEvent &event);
         void OnShowLineNumbers(wxCommandEvent &event);
@@ -104,10 +109,13 @@ class EditorTweaks : public cbPlugin
         void OnEOLCR(wxCommandEvent &event);
         void OnEOLLF(wxCommandEvent &event);
 
+        void UpdateUI();
 
 //        void EditorEventHook(cbEditor* editor, wxScintillaEvent& event);
     private:
         int m_EditorHookId;
+        wxMenu *m_tweakmenu;
+        wxMenuItem *m_tweakmenuitem;
 
         DECLARE_EVENT_TABLE();
 };

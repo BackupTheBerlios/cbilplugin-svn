@@ -21,7 +21,8 @@
 				<Linker>
 					<Add option="`wx-config --libs`" />
 					<Add library="codeblocks" />
-					<Add directory="/opt/codeblocks-svn/lib" />
+					<Add library="wxscintilla" />
+					<Add directory="../../../devel" />
 				</Linker>
 				<ExtraCommands>
 					<Add after="zip -j9 EditorTweaks.zip manifest.xml" />

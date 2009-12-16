@@ -621,7 +621,6 @@ void EditorTweaks::DoFoldAboveLevel(int level, int fold)
         if (!(line_level_data & wxSCI_FOLDLEVELHEADERFLAG))
             continue;
         int line_level = line_level_data & wxSCI_FOLDLEVELNUMBERMASK;
-        Manager::Get()->GetLogManager()->Log(wxString::Format(_("Folding at line %i level %i"),line,line_level));
 
         bool IsExpanded = ed->GetControl()->GetFoldExpanded(line);
 

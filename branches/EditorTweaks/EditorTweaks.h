@@ -109,6 +109,11 @@ class EditorTweaks : public cbPlugin
         void OnEOLCR(wxCommandEvent &event);
         void OnEOLLF(wxCommandEvent &event);
 
+        void OnFold(wxCommandEvent &event);
+        void OnUnfold(wxCommandEvent &event);
+        void DoFoldAboveLevel(int level, int fold);
+
+        void OnUpdateUI(wxUpdateUIEvent &event);
         void UpdateUI();
 
 //        void EditorEventHook(cbEditor* editor, wxScintillaEvent& event);

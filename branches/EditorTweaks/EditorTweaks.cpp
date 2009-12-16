@@ -35,11 +35,37 @@ int id_et_EnsureConsistentEOL = wxNewId();
 int id_et_EOLCRLF = wxNewId();
 int id_et_EOLCR = wxNewId();
 int id_et_EOLLF = wxNewId();
+int id_et_Fold1= wxNewId();
+int id_et_Fold2= wxNewId();
+int id_et_Fold3= wxNewId();
+int id_et_Fold4= wxNewId();
+int id_et_Fold5= wxNewId();
+int id_et_Unfold1= wxNewId();
+int id_et_Unfold2= wxNewId();
+int id_et_Unfold3= wxNewId();
+int id_et_Unfold4= wxNewId();
+int id_et_Unfold5= wxNewId();
 
 
 
 // events handling
 BEGIN_EVENT_TABLE(EditorTweaks, cbPlugin)
+    EVT_UPDATE_UI(id_et_WordWrap, EditorTweaks::OnUpdateUI)
+    EVT_UPDATE_UI(id_et_ShowLineNumbers, EditorTweaks::OnUpdateUI)
+    EVT_UPDATE_UI(id_et_TabChar, EditorTweaks::OnUpdateUI)
+    EVT_UPDATE_UI(id_et_TabIndent, EditorTweaks::OnUpdateUI)
+    EVT_UPDATE_UI(id_et_TabSize2, EditorTweaks::OnUpdateUI)
+    EVT_UPDATE_UI(id_et_TabSize4, EditorTweaks::OnUpdateUI)
+    EVT_UPDATE_UI(id_et_TabSize6, EditorTweaks::OnUpdateUI)
+    EVT_UPDATE_UI(id_et_TabSize8, EditorTweaks::OnUpdateUI)
+    EVT_UPDATE_UI(id_et_ShowEOL, EditorTweaks::OnUpdateUI)
+    EVT_UPDATE_UI(id_et_StripTrailingBlanks, EditorTweaks::OnUpdateUI)
+    EVT_UPDATE_UI(id_et_EnsureConsistentEOL, EditorTweaks::OnUpdateUI)
+    EVT_UPDATE_UI(id_et_EOLCRLF, EditorTweaks::OnUpdateUI)
+    EVT_UPDATE_UI(id_et_EOLCR, EditorTweaks::OnUpdateUI)
+    EVT_UPDATE_UI(id_et_EOLLF, EditorTweaks::OnUpdateUI)
+
+
     EVT_MENU(id_et_WordWrap, EditorTweaks::OnWordWrap)
     EVT_MENU(id_et_ShowLineNumbers, EditorTweaks::OnShowLineNumbers)
     EVT_MENU(id_et_TabChar, EditorTweaks::OnTabChar)
@@ -54,6 +80,16 @@ BEGIN_EVENT_TABLE(EditorTweaks, cbPlugin)
     EVT_MENU(id_et_EOLCRLF, EditorTweaks::OnEOLCRLF)
     EVT_MENU(id_et_EOLCR, EditorTweaks::OnEOLCR)
     EVT_MENU(id_et_EOLLF, EditorTweaks::OnEOLLF)
+    EVT_MENU(id_et_Fold1, EditorTweaks::OnFold)
+    EVT_MENU(id_et_Fold2, EditorTweaks::OnFold)
+    EVT_MENU(id_et_Fold3, EditorTweaks::OnFold)
+    EVT_MENU(id_et_Fold4, EditorTweaks::OnFold)
+    EVT_MENU(id_et_Fold5, EditorTweaks::OnFold)
+    EVT_MENU(id_et_Unfold1, EditorTweaks::OnUnfold)
+    EVT_MENU(id_et_Unfold2, EditorTweaks::OnUnfold)
+    EVT_MENU(id_et_Unfold3, EditorTweaks::OnUnfold)
+    EVT_MENU(id_et_Unfold4, EditorTweaks::OnUnfold)
+    EVT_MENU(id_et_Unfold5, EditorTweaks::OnUnfold)
 END_EVENT_TABLE()
 
 // constructor
@@ -86,10 +122,10 @@ void EditorTweaks::OnAttach()
 //    m_EditorHookId = EditorHooks::RegisterHook(myhook);
     Manager* pm = Manager::Get();
     pm->RegisterEventSink(cbEVT_EDITOR_OPEN, new cbEventFunctor<EditorTweaks, CodeBlocksEvent>(this, &EditorTweaks::OnEditorOpen));
-    pm->RegisterEventSink(cbEVT_EDITOR_CLOSE, new cbEventFunctor<EditorTweaks, CodeBlocksEvent>(this, &EditorTweaks::OnEditorClose));
+//    pm->RegisterEventSink(cbEVT_EDITOR_CLOSE, new cbEventFunctor<EditorTweaks, CodeBlocksEvent>(this, &EditorTweaks::OnEditorClose));
 //    pm->RegisterEventSink(cbEVT_EDITOR_UPDATE_UI, new cbEventFunctor<EditorTweaks, CodeBlocksEvent>(this, &EditorTweaks::OnEditorUpdateUI));
-    pm->RegisterEventSink(cbEVT_EDITOR_ACTIVATED, new cbEventFunctor<EditorTweaks, CodeBlocksEvent>(this, &EditorTweaks::OnEditorActivate));
-    pm->RegisterEventSink(cbEVT_EDITOR_DEACTIVATED, new cbEventFunctor<EditorTweaks, CodeBlocksEvent>(this, &EditorTweaks::OnEditorDeactivate));
+//    pm->RegisterEventSink(cbEVT_EDITOR_SWITCHED, new cbEventFunctor<EditorTweaks, CodeBlocksEvent>(this, &EditorTweaks::OnEditorActivate));
+//    pm->RegisterEventSink(cbEVT_EDITOR_DEACTIVATED, new cbEventFunctor<EditorTweaks, CodeBlocksEvent>(this, &EditorTweaks::OnEditorDeactivate));
 
     m_tweakmenu=NULL;
 
@@ -110,7 +146,7 @@ void EditorTweaks::OnRelease(bool appShutDown)
 {
     m_tweakmenu=NULL;
 
-    EditorHooks::UnregisterHook(m_EditorHookId, true);
+//    EditorHooks::UnregisterHook(m_EditorHookId, true);
     EditorManager* em = Manager::Get()->GetEditorManager();
     for(int i=0;i<em->GetEditorsCount();i++)
     {
@@ -170,12 +206,45 @@ void EditorTweaks::BuildMenu(wxMenuBar* menuBar)
     submenu->AppendCheckItem( id_et_ShowEOL, _( "Show EOL Chars" ), _( "Show End-of-Line Characters" ) );
     submenu->Append( id_et_StripTrailingBlanks, _( "Strip Trailing Blanks Now" ), _( "Strip trailing blanks from each line" ) );
     submenu->Append( id_et_EnsureConsistentEOL, _( "Make EOLs Consistent Now" ), _( "Convert End-of-Line Characters to the Active Setting" ) );
+    submenu->AppendSeparator();
+
+
+    wxMenu *foldmenu=NULL;
+    for(i=0;i<menu->GetMenuItemCount();i++)
+    {
+        wxMenuItem *mm=menu->FindItemByPosition(i);
+        if(mm->GetLabel()==_("Folding"))
+        {
+            foldmenu=mm->GetSubMenu();
+            break;
+        }
+    }
+    if(!foldmenu)
+    {
+        Manager::Get()->GetLogManager()->DebugLog(_("Editor Tweaks plugin: Folding menu"));
+        return;
+    }
+
+    foldmenu->AppendSeparator();
+    wxMenu *foldlevelmenu=new wxMenu();
+    foldlevelmenu->Append( id_et_Fold1, _( "1" ), _( "Fold all code to the first level" ) );
+    foldlevelmenu->Append( id_et_Fold2, _( "2" ), _( "Fold all code to the second level" ) );
+    foldlevelmenu->Append( id_et_Fold3, _( "3" ), _( "Fold all code to the third level" ) );
+    foldlevelmenu->Append( id_et_Fold4, _( "4" ), _( "Fold all code to the fourth level" ) );
+    foldlevelmenu->Append( id_et_Fold5, _( "5" ), _( "Fold all code to the fifth level" ) );
+    foldmenu->Append(wxID_ANY,_("Fold all above level"),foldlevelmenu);
+
+    wxMenu *unfoldlevelmenu=new wxMenu();
+    unfoldlevelmenu->Append( id_et_Unfold1, _( "1" ), _( "Unfold all code to the first level" ) );
+    unfoldlevelmenu->Append( id_et_Unfold2, _( "2" ), _( "Unfold all code to the second level" ) );
+    unfoldlevelmenu->Append( id_et_Unfold3, _( "3" ), _( "Unfold all code to the third level" ) );
+    unfoldlevelmenu->Append( id_et_Unfold4, _( "4" ), _( "Unfold all code to the fourth level" ) );
+    unfoldlevelmenu->Append( id_et_Unfold5, _( "5" ), _( "Unfold all code to the fifth level" ) );
+    foldmenu->Append(wxID_ANY,_("Unfold all above level"),unfoldlevelmenu);
 
     UpdateUI();
 }
 
-
-int update_count=0;
 
 void EditorTweaks::UpdateUI()
 {
@@ -207,14 +276,23 @@ void EditorTweaks::OnEditorUpdateUI(CodeBlocksEvent& event)
     UpdateUI();
 }
 
+void EditorTweaks::OnUpdateUI(wxUpdateUIEvent &event)
+{
+    UpdateUI();
+}
 
 void EditorTweaks::OnEditorActivate(CodeBlocksEvent& event)
 {
     Manager::Get()->GetLogManager()->DebugLog(wxString::Format(_("Editor Activate")));
     if(!m_IsAttached || !m_tweakmenu)
         return;
-    m_tweakmenuitem->Enable(true);
-    UpdateUI();
+    if(event.GetEditor() && event.GetEditor()->IsBuiltinEditor())
+    {
+        m_tweakmenuitem->Enable(true);
+        UpdateUI();
+    }
+    else
+        m_tweakmenuitem->Enable(false);
 }
 
 void EditorTweaks::OnEditorDeactivate(CodeBlocksEvent& event)
@@ -504,3 +582,57 @@ void EditorTweaks::OnEOLLF(wxCommandEvent &event)
     ed->GetControl()->SetEOLMode(wxSCI_EOL_LF);
 }
 
+void EditorTweaks::OnFold(wxCommandEvent &event)
+{
+    int level=event.GetId()-id_et_Fold1;
+    Manager::Get()->GetLogManager()->Log(wxString::Format(_("Fold at level %i"),level));
+    DoFoldAboveLevel(level,1);
+}
+
+void EditorTweaks::OnUnfold(wxCommandEvent &event)
+{
+    int level=event.GetId()-id_et_Unfold1;
+    Manager::Get()->GetLogManager()->Log(wxString::Format(_("Unfold at level %i"),level));
+    DoFoldAboveLevel(level,0);
+}
+
+
+/**	Fold/Unfold/Toggle all folds in the givel level.
+	\param	level	Level number of folding, starting from 0.
+	\param	fold	Type of folding action requested:	\n
+	-	0 = Unfold.
+	-	1 = Fold.
+*/
+void EditorTweaks::DoFoldAboveLevel(int level, int fold)
+{
+    cbEditor* ed = Manager::Get()->GetEditorManager()->GetBuiltinActiveEditor();
+    if(!ed || !ed->GetControl())
+        return;
+
+    level+=wxSCI_FOLDLEVELBASE;
+
+    ed->GetControl()->Colourise(0, -1); // the *most* important part!
+
+	// Scan all file lines searching for the specified folding level.
+    int count = ed->GetControl()->GetLineCount();
+    for (int line = 0; line <= count; ++line)
+    {
+        int line_level_data = ed->GetControl()->GetFoldLevel(line);
+        if (!(line_level_data & wxSCI_FOLDLEVELHEADERFLAG))
+            continue;
+        int line_level = line_level_data & wxSCI_FOLDLEVELNUMBERMASK;
+        Manager::Get()->GetLogManager()->Log(wxString::Format(_("Folding at line %i level %i"),line,line_level));
+
+        bool IsExpanded = ed->GetControl()->GetFoldExpanded(line);
+
+        // If a fold/unfold request is issued when the block is already
+        // folded/unfolded, ignore the request.
+        if(line_level<=level)
+            if(IsExpanded)
+                continue;
+        else
+            if(fold==0 && IsExpanded || fold ==1 && !IsExpanded)
+                continue;
+        ed->GetControl()->ToggleFold(line);
+    }
+}

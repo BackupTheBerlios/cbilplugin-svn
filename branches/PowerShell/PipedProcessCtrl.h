@@ -24,10 +24,10 @@ namespace
 ShellCtrlRegistrant<PipedProcessCtrl> reg(_T("Piped Process Control"));
 }
 
-class PipedTextCtrl: public wxTextCtrl
+class PipedTextCtrl: public wxScintilla
 {
 public:
-    PipedTextCtrl(wxWindow *parent, PipedProcessCtrl *pp) : wxTextCtrl(parent, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_RICH|wxTE_MULTILINE|wxTE_READONLY|wxTE_PROCESS_ENTER|wxEXPAND) {m_pp = pp;}
+    PipedTextCtrl(wxWindow *parent, PipedProcessCtrl *pp);
     void OnDClick(wxMouseEvent& e);
     void OnUserInput(wxKeyEvent &e);
     PipedProcessCtrl *m_pp;

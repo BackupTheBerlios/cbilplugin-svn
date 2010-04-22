@@ -5,12 +5,25 @@
 #include <globals.h>
 
 ////////////////////////////////////// PipedProcessCtrl /////////////////////////////////////////////
+#define PP_ERROR_STYLE 1
+#define PP_LINK_STYLE 2
+
+
 int ID_PROC=wxNewId();
 
-BEGIN_EVENT_TABLE(PipedTextCtrl, wxTextCtrl)
+BEGIN_EVENT_TABLE(PipedTextCtrl, wxScintilla)
     EVT_LEFT_DCLICK(PipedTextCtrl::OnDClick)
     EVT_KEY_DOWN(PipedTextCtrl::OnUserInput)
 END_EVENT_TABLE()
+
+PipedTextCtrl::PipedTextCtrl(wxWindow *parent, PipedProcessCtrl *pp) : wxScintilla(parent, wxID_ANY)
+{
+    m_pp = pp;
+    this->StyleSetForeground(PP_ERROR_STYLE,wxColor(200,0,0));
+    this->StyleSetForeground(PP_LINK_STYLE,wxColor(0,0,200));
+    this->StyleSetUnderline(PP_LINK_STYLE,true);
+}
+
 
 void PipedTextCtrl::OnDClick(wxMouseEvent &e)
 {
@@ -130,9 +143,7 @@ void PipedProcessCtrl::SyncOutput(int maxchars)
         maxchars=20000;
         oneshot=false;
     }
-    int lineno=m_textctrl->GetNumberOfLines()-1;
-    if(lineno<0)
-        lineno=0;
+    int lineno=m_textctrl->GetLineCount()-1;
     while(m_proc->IsInputAvailable())
     {
         char buf0[maxchars+1];
@@ -140,15 +151,18 @@ void PipedProcessCtrl::SyncOutput(int maxchars)
             buf0[i]=0;
         m_istream->Read(buf0,maxchars);
         wxString m_latest=wxString::FromAscii(buf0);
+        int start,end;
+        m_textctrl->GetSelection(&start,&end);
+        int pos=start>end?start:end;
+        bool move_caret=(pos==m_textctrl->PositionAfter(pos))||(start!=end);
         m_textctrl->AppendText(m_latest);
+        if(move_caret)
+            m_textctrl->SetSelection(-1,-1);
         if(oneshot)
             break;
     }
     if(m_proc->IsErrorAvailable())
     {
-        wxTextAttr ta(wxColour(255,0,0));
-        wxTextAttr oldta=m_textctrl->GetDefaultStyle();
-        m_textctrl->SetDefaultStyle(ta);
         while(m_proc->IsErrorAvailable())
         {
             char buf0[maxchars+1];
@@ -156,26 +170,32 @@ void PipedProcessCtrl::SyncOutput(int maxchars)
                 buf0[i]=0;
             m_estream->Read(buf0,maxchars);
             wxString m_latest=wxString::FromAscii(buf0);
+            int start,end;
+            m_textctrl->GetSelection(&start,&end);
+            int pos=start>end?start:end;
+            bool move_caret=(pos==m_textctrl->PositionAfter(pos))||(start!=end);
+            int style_start=m_textctrl->PositionFromLine(m_textctrl->GetLineCount());
             m_textctrl->AppendText(m_latest);
+            if(move_caret)
+                m_textctrl->SetSelection(-1,-1);
+
+            m_textctrl->StartStyling(style_start,0x1F);
+            m_textctrl->SetStyling(m_textctrl->PositionFromLine(m_textctrl->GetLineCount())-style_start,PP_ERROR_STYLE);
             if(oneshot)
                 break;
         }
-        m_textctrl->SetDefaultStyle(oldta);
     }
     if(m_parselinks)
-        ParseLinks(lineno,m_textctrl->GetNumberOfLines());
+        ParseLinks(lineno,m_textctrl->GetLineCount());
 }
 
 void PipedProcessCtrl::ParseLinks(int lineno, int lastline)
 {
-    wxTextAttr ta(wxColour(0,180,0));
-    wxTextAttr oldta=m_textctrl->GetDefaultStyle();
-    m_textctrl->SetDefaultStyle(ta);
     wxRegEx re(m_linkregex,wxRE_ADVANCED|wxRE_NEWLINE);
     while(lineno<lastline)
     {
         int col=0;
-        wxString text=m_textctrl->GetLineText(lineno);
+        wxString text=m_textctrl->GetLine(lineno);
         wxString file;
         while(re.Matches(text))
         {
@@ -188,8 +208,10 @@ void PipedProcessCtrl::ParseLinks(int lineno, int lastline)
                 wxFileName f(file);
                 if(f.FileExists())
                 {
-                    int changepos=m_textctrl->XYToPosition(col+start,lineno);
-                    m_textctrl->SetStyle(changepos,changepos+len,ta);
+                    int pos=m_textctrl->PositionFromLine(lineno)+col+start;
+                    m_textctrl->StartStyling(pos,0x1F);
+                    m_textctrl->SetStyling(len,PP_LINK_STYLE);
+
                 }
             }
             col+=start+len;
@@ -197,7 +219,6 @@ void PipedProcessCtrl::ParseLinks(int lineno, int lastline)
         }
         lineno++;
     }
-    m_textctrl->SetDefaultStyle(oldta);
 }
 
 void PipedProcessCtrl::OnSize(wxSizeEvent& event)
@@ -213,6 +234,7 @@ void PipedProcessCtrl::OnUserInput(wxKeyEvent& ke)
         ke.Skip();
         return;
     }
+    //todo: if user presses navigational keys accept them as navigational (also copy/paste shortcuts?)
     char* kc1=new char[2];
     kc1[0]=ke.GetKeyCode()%256;
     kc1[1]=0;
@@ -229,7 +251,7 @@ void PipedProcessCtrl::OnUserInput(wxKeyEvent& ke)
 //    m_proc->GetOutputStream()->Write(kc1,1);
 //    cbMessageBox(_T("bytes written: ")+wxString::Format(_T("code: %u"),m_ostream->LastWrite()));
     m_textctrl->AppendText(kc2);
-    m_textctrl->SetInsertionPointEnd();
+//    m_textctrl->SetInsertionPointEnd();
 }
 
 
@@ -242,56 +264,56 @@ void PipedProcessCtrl::OnUserInput(wxKeyEvent& ke)
 
 void PipedProcessCtrl::OnDClick(wxMouseEvent &e)
 {
-    if(!m_linkclicks)
-        return;
-    wxTextCoord x,y;
-    m_textctrl->HitTest(e.GetPosition(),&x,&y);
-    wxRegEx re(m_linkregex,wxRE_ADVANCED|wxRE_NEWLINE);
-    wxString text=m_textctrl->GetLineText(y);
-    wxString file;
-    long line;
-    while(1)
-    {
-        if(!re.Matches(text))
-            return;
-        size_t start,len;
-        re.GetMatch(&start,&len,0);
-        if(static_cast<size_t>(x)<start)
-            return;
-        if(static_cast<size_t>(x)>start+len)
-        {
-            text=text.Mid(start+len);
-            x-=start+len;
-            continue;
-        }
-        if(re.GetMatch(&start,&len,1))
-            file=text.Mid(start,len);
-        else
-            file=wxEmptyString;
-        if(re.GetMatch(&start,&len,3))
-            text.Mid(start,len).ToLong(&line);
-        else
-            line=0;
-        break;
+//    if(!m_linkclicks)
+//        return;
+//    wxTextCoord x,y;
+//    m_textctrl->HitTest(e.GetPosition(),&x,&y);
+//    wxRegEx re(m_linkregex,wxRE_ADVANCED|wxRE_NEWLINE);
+//    wxString text=m_textctrl->GetLineText(y);
+//    wxString file;
+//    long line;
+//    while(1)
+//    {
+//        if(!re.Matches(text))
+//            return;
+//        size_t start,len;
 //        re.GetMatch(&start,&len,0);
-//        cbMessageBox(wxString::Format(_T("match '%s'\nfile '%s'\nline '%i'"), text.Mid(start,len).c_str(), file.c_str(), line));
-    }
-    wxFileName f(file);
-    if(f.FileExists())
-    {
-        cbEditor* ed = Manager::Get()->GetEditorManager()->Open(f.GetFullPath());
-        if (ed)
-        {
-            ed->Show(true);
-//            if (!ed->GetProjectFile())
-//                ed->SetProjectFile(f.GetFullPath());
-            ed->GotoLine(line - 1, false);
-            if(line>0)
-                if(!ed->HasBookmark(line - 1))
-                    ed->ToggleBookmark(line -1);
-        }
-    }
-
+//        if(static_cast<size_t>(x)<start)
+//            return;
+//        if(static_cast<size_t>(x)>start+len)
+//        {
+//            text=text.Mid(start+len);
+//            x-=start+len;
+//            continue;
+//        }
+//        if(re.GetMatch(&start,&len,1))
+//            file=text.Mid(start,len);
+//        else
+//            file=wxEmptyString;
+//        if(re.GetMatch(&start,&len,3))
+//            text.Mid(start,len).ToLong(&line);
+//        else
+//            line=0;
+//        break;
+////        re.GetMatch(&start,&len,0);
+////        cbMessageBox(wxString::Format(_T("match '%s'\nfile '%s'\nline '%i'"), text.Mid(start,len).c_str(), file.c_str(), line));
+//    }
+//    wxFileName f(file);
+//    if(f.FileExists())
+//    {
+//        cbEditor* ed = Manager::Get()->GetEditorManager()->Open(f.GetFullPath());
+//        if (ed)
+//        {
+//            ed->Show(true);
+////            if (!ed->GetProjectFile())
+////                ed->SetProjectFile(f.GetFullPath());
+//            ed->GotoLine(line - 1, false);
+//            if(line>0)
+//                if(!ed->HasBookmark(line - 1))
+//                    ed->ToggleBookmark(line -1);
+//        }
+//    }
+//
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////

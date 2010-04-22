@@ -82,7 +82,8 @@
 				</Compiler>
 				<Linker>
 					<Add library="$(#cb_bin)\codeblocks.dll" />
-					<Add library="$(#cb_bin)\wxmsw28u_gcc_cb.dll" />
+					<Add library="$(#cb_bin)\wxmsw28u_gcc_custom.dll" />
+					<Add library="$(#cb_bin)\wxscintilla.dll" />
 				</Linker>
 				<ExtraCommands>
 					<Add after="strip plugin\PowerShell.dll" />

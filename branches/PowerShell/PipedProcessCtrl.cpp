@@ -151,13 +151,16 @@ void PipedProcessCtrl::SyncOutput(int maxchars)
             buf0[i]=0;
         m_istream->Read(buf0,maxchars);
         wxString m_latest=wxString::FromAscii(buf0);
-        int start,end;
+        long start,end;
         m_textctrl->GetSelection(&start,&end);
         int pos=start>end?start:end;
         bool move_caret=(pos==m_textctrl->PositionAfter(pos))||(start!=end);
         m_textctrl->AppendText(m_latest);
         if(move_caret)
-            m_textctrl->SetSelection(-1,-1);
+        {
+            m_textctrl->SetSelectionStart(-1);
+            m_textctrl->SetSelectionEnd(-1);
+        }
         if(oneshot)
             break;
     }
@@ -170,14 +173,17 @@ void PipedProcessCtrl::SyncOutput(int maxchars)
                 buf0[i]=0;
             m_estream->Read(buf0,maxchars);
             wxString m_latest=wxString::FromAscii(buf0);
-            int start,end;
+            long start,end;
             m_textctrl->GetSelection(&start,&end);
             int pos=start>end?start:end;
             bool move_caret=(pos==m_textctrl->PositionAfter(pos))||(start!=end);
             int style_start=m_textctrl->PositionFromLine(m_textctrl->GetLineCount());
             m_textctrl->AppendText(m_latest);
             if(move_caret)
-                m_textctrl->SetSelection(-1,-1);
+            {
+                m_textctrl->SetSelectionStart(-1);
+                m_textctrl->SetSelectionEnd(-1);
+            }
 
             m_textctrl->StartStyling(style_start,0x1F);
             m_textctrl->SetStyling(m_textctrl->PositionFromLine(m_textctrl->GetLineCount())-style_start,PP_ERROR_STYLE);

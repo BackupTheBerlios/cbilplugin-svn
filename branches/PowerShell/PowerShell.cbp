@@ -31,14 +31,14 @@
 					<Add option="-DWX_PRECOMP" />
 					<Add option="-DwxUSE_UNICODE" />
 					<Add directory="..\..\..\include" />
-					<Add directory="..\..\..\include\wxscintilla\include" />
-					<Add directory="..\..\..\include\wxFlatNotebook\include" />
+					<Add directory="..\..\..\sdk\wxscintilla\include" />
 					<Add directory="$(#wx.include)" />
 					<Add directory="$(#wx.lib)\gcc_dll$(WX_CFG)\msw$(WX_SUFFIX)" />
 				</Compiler>
 				<Linker>
 					<Add library="codeblocks" />
 					<Add library="wxmsw28$(WX_SUFFIX)" />
+					<Add library="wxscintilla" />
 					<Add directory="..\..\..\devel" />
 					<Add directory="$(#wx.lib)\gcc_dll$(WX_CFG)" />
 				</Linker>
@@ -75,14 +75,13 @@
 					<Add option="-DWX_PRECOMP" />
 					<Add option="-DwxUSE_UNICODE" />
 					<Add directory="..\..\..\include" />
-					<Add directory="..\..\..\include\wxscintilla\include" />
-					<Add directory="..\..\..\include\wxFlatNotebook\include" />
+					<Add directory="..\..\..\sdk\wxscintilla\include" />
 					<Add directory="$(#wx.include)" />
 					<Add directory="$(#wx.lib)\gcc_dll$(WX_CFG)\msw$(WX_SUFFIX)" />
 				</Compiler>
 				<Linker>
 					<Add library="$(#cb_bin)\codeblocks.dll" />
-					<Add library="$(#cb_bin)\wxmsw28u_gcc_custom.dll" />
+					<Add library="$(#cb_bin)\wxmsw28u_gcc_cb.dll" />
 					<Add library="$(#cb_bin)\wxscintilla.dll" />
 				</Linker>
 				<ExtraCommands>

@@ -53,6 +53,8 @@ PipedProcessCtrl::PipedProcessCtrl(wxWindow* parent, int id, const wxString &nam
     m_dead=true;
     m_proc=NULL;
     m_killlevel=0;
+    m_linkclicks=true;
+    m_parselinks=true;
     m_textctrl=new PipedTextCtrl(this,this);//(this, id, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_RICH|wxTE_MULTILINE|wxTE_READONLY|wxTE_PROCESS_ENTER|wxEXPAND);
     wxBoxSizer* bs = new wxBoxSizer(wxVERTICAL);
     bs->Add(m_textctrl, 1, wxEXPAND | wxALL);
@@ -131,8 +133,8 @@ void PipedProcessCtrl::KillProcess()
 }
 
 wxString PipedProcessCtrl::LinkRegexDefault=
-_T("[\"']?([^'\",\\s:;*?]+?)[\"']?[\\s]*(\\:|\\(|\\[|\\,?\\s*[Ll]ine)?\\s*(\\d*)");
-
+_T("[\"']?((?:\\w\\:)?[^'\",\\s:;*?]+?)[\"']?[\\s]*(\\:|\\(|\\[|\\,?\\s*[Ll]ine)?\\s*(\\d*)");
+//           a:         \path\to\file              line 300
 void PipedProcessCtrl::SyncOutput(int maxchars)
 {
     if(!m_proc)
@@ -152,7 +154,8 @@ void PipedProcessCtrl::SyncOutput(int maxchars)
         m_istream->Read(buf0,maxchars);
         wxString m_latest=wxString::FromAscii(buf0);
         long start,end;
-        m_textctrl->GetSelection(&start,&end);
+        start=m_textctrl->GetSelectionStart();
+        end=m_textctrl->GetSelectionEnd();
         int pos=start>end?start:end;
         bool move_caret=(pos==m_textctrl->PositionAfter(pos))||(start!=end);
         m_textctrl->AppendText(m_latest);
@@ -174,7 +177,8 @@ void PipedProcessCtrl::SyncOutput(int maxchars)
             m_estream->Read(buf0,maxchars);
             wxString m_latest=wxString::FromAscii(buf0);
             long start,end;
-            m_textctrl->GetSelection(&start,&end);
+            start=m_textctrl->GetSelectionStart();
+            end=m_textctrl->GetSelectionEnd();
             int pos=start>end?start:end;
             bool move_caret=(pos==m_textctrl->PositionAfter(pos))||(start!=end);
             int style_start=m_textctrl->PositionFromLine(m_textctrl->GetLineCount());
@@ -270,56 +274,65 @@ void PipedProcessCtrl::OnUserInput(wxKeyEvent& ke)
 
 void PipedProcessCtrl::OnDClick(wxMouseEvent &e)
 {
-//    if(!m_linkclicks)
-//        return;
-//    wxTextCoord x,y;
-//    m_textctrl->HitTest(e.GetPosition(),&x,&y);
-//    wxRegEx re(m_linkregex,wxRE_ADVANCED|wxRE_NEWLINE);
-//    wxString text=m_textctrl->GetLineText(y);
-//    wxString file;
-//    long line;
-//    while(1)
-//    {
-//        if(!re.Matches(text))
-//            return;
-//        size_t start,len;
-//        re.GetMatch(&start,&len,0);
-//        if(static_cast<size_t>(x)<start)
-//            return;
-//        if(static_cast<size_t>(x)>start+len)
-//        {
-//            text=text.Mid(start+len);
-//            x-=start+len;
-//            continue;
-//        }
-//        if(re.GetMatch(&start,&len,1))
-//            file=text.Mid(start,len);
-//        else
-//            file=wxEmptyString;
-//        if(re.GetMatch(&start,&len,3))
-//            text.Mid(start,len).ToLong(&line);
-//        else
-//            line=0;
-//        break;
-////        re.GetMatch(&start,&len,0);
-////        cbMessageBox(wxString::Format(_T("match '%s'\nfile '%s'\nline '%i'"), text.Mid(start,len).c_str(), file.c_str(), line));
-//    }
-//    wxFileName f(file);
-//    if(f.FileExists())
-//    {
-//        cbEditor* ed = Manager::Get()->GetEditorManager()->Open(f.GetFullPath());
-//        if (ed)
-//        {
-//            ed->Show(true);
-////            if (!ed->GetProjectFile())
-////                ed->SetProjectFile(f.GetFullPath());
-//            ed->GotoLine(line - 1, false);
-//            if(line>0)
-//                if(!ed->HasBookmark(line - 1))
-//                    ed->ToggleBookmark(line -1);
-//        }
-//    }
-//
+    //First retrieve the link text
+    if(!m_linkclicks)
+        return;
+    long pos=m_textctrl->PositionFromPoint(e.GetPosition());
+    int style=m_textctrl->GetStyleAt(pos);
+    if(style&PP_LINK_STYLE!=PP_LINK_STYLE)
+        return; //didn't click a link
+    long start=pos;
+    while(start>0)
+    {
+        style=m_textctrl->GetStyleAt(start-1);
+        if((style&PP_LINK_STYLE)!=PP_LINK_STYLE)
+            break;
+        start--;
+    }
+    long end=pos;
+    while(end<m_textctrl->PositionFromLine(m_textctrl->GetLineCount()-1))
+    {
+        style=m_textctrl->GetStyleAt(end+1);
+        if((style&PP_LINK_STYLE)!=PP_LINK_STYLE)
+            break;
+        end++;
+    }
+    wxString text=m_textctrl->GetTextRange(start,end+1);
+
+    //retrieve the file and line number parts of the link
+    wxRegEx re(m_linkregex,wxRE_ADVANCED|wxRE_NEWLINE);
+    wxString file;
+    long line;
+    if(!re.Matches(text))
+        return;
+    size_t ind,len;
+    re.GetMatch(&ind,&len,0);
+    if(re.GetMatch(&ind,&len,1))
+        file=text.Mid(ind,len);
+    else
+        file=wxEmptyString;
+    if(re.GetMatch(&ind,&len,3))
+        text.Mid(ind,len).ToLong(&line);
+    else
+        line=0;
+
+    //open the file in the editor
+    wxFileName f(file);
+    if(f.FileExists())
+    {
+        cbEditor* ed = Manager::Get()->GetEditorManager()->Open(f.GetFullPath());
+        if (ed)
+        {
+            ed->Show(true);
+//            if (!ed->GetProjectFile())
+//                ed->SetProjectFile(f.GetFullPath());
+            ed->GotoLine(line - 1, false);
+            if(line>0)
+                if(!ed->HasBookmark(line - 1))
+                    ed->ToggleBookmark(line -1);
+        }
+    }
+
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////

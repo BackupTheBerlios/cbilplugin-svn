@@ -342,7 +342,11 @@ bool FileExplorerUpdater::ParseBZRstate(const wxString &path, VCSstatearray &sa)
         return false;
     wxArrayString output;
     wxString rpath=parent;
+    #ifdef __WXMSW__
     int hresult=Exec(_T("cmd /c bzr stat --short ")+path,output);
+    #else
+    int hresult=Exec(_T("bzr stat --short ")+path,output);
+    #endif
     if(hresult!=0)
     {
         return false;

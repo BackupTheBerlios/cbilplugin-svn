@@ -14,7 +14,6 @@ END_EVENT_TABLE()
 
 FileExplorerUpdater::~FileExplorerUpdater()
 {
-    std::cout<<"destructor file explorer updater"<<std::endl;
     if(m_exec_proc)
     {
         m_exec_timer->Stop();
@@ -343,9 +342,11 @@ bool FileExplorerUpdater::ParseBZRstate(const wxString &path, VCSstatearray &sa)
         return false;
     wxArrayString output;
     wxString rpath=parent;
-    int hresult=Exec(_T("bzr stat --short ")+path,output);
+    int hresult=Exec(_T("cmd /c bzr stat --short ")+path,output);
     if(hresult!=0)
+    {
         return false;
+    }
     for(size_t i=0;i<output.GetCount();i++)
     {
         if(output[i].Len()<=4)

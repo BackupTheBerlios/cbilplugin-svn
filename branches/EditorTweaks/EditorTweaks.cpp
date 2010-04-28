@@ -18,6 +18,17 @@
 namespace
 {
     PluginRegistrant<EditorTweaks> reg(_T("EditorTweaks"));
+
+    struct CompareAlignerMenuEntry
+    {
+        bool operator() (AlignerMenuEntry i, AlignerMenuEntry j) { return (i.UsageCount<=j.UsageCount);}
+    } CompareAlignerMenuEntryObject;
+
+    const unsigned int MaxStoreAlignerdEntries = 4;
+
+    wxString defaultNames[MaxStoreAlignerdEntries] = { _T("Equality Operator"), _T("C/C++ line Comment "), _T("VHDL Signal Assignment"), _T("VHDL named association")};
+    wxString defaultStrings[MaxStoreAlignerdEntries] = { _T("="), _T("//"), _T("<="), _T("=>") };
+
 }
 
 int id_et= wxNewId();
@@ -45,6 +56,7 @@ int id_et_Unfold2= wxNewId();
 int id_et_Unfold3= wxNewId();
 int id_et_Unfold4= wxNewId();
 int id_et_Unfold5= wxNewId();
+int id_et_align_others= wxNewId();
 
 
 
@@ -90,6 +102,8 @@ BEGIN_EVENT_TABLE(EditorTweaks, cbPlugin)
     EVT_MENU(id_et_Unfold3, EditorTweaks::OnUnfold)
     EVT_MENU(id_et_Unfold4, EditorTweaks::OnUnfold)
     EVT_MENU(id_et_Unfold5, EditorTweaks::OnUnfold)
+
+    EVT_MENU(id_et_align_others, EditorTweaks::OnAlignOthers)
 END_EVENT_TABLE()
 
 // constructor
@@ -140,6 +154,21 @@ void EditorTweaks::OnAttach()
         }
     }
 
+
+    AlignerMenuEntry e;
+
+    ConfigManager *cfg = Manager::Get()->GetConfigManager(_T("EditorTweaks"));
+
+    for(int i = 0 ; i<MaxStoreAlignerdEntries ; i++)
+    {
+        e.MenuName = cfg->Read(wxString::Format(_T("AlignerFirstName%d"),i),defaultNames[i]);
+        e.ArgumentString = cfg->Read(wxString::Format(_T("AlignerFirstArgumentString%d"),i) ,defaultStrings[i]);
+        e.UsageCount = 0;
+        e.id = wxNewId();
+        AlignerMenuEntries.push_back (e);
+        Connect(e.id, wxEVT_COMMAND_MENU_SELECTED,  wxCommandEventHandler(EditorTweaks::OnAlign) );
+    }
+
 }
 
 void EditorTweaks::OnRelease(bool appShutDown)
@@ -153,6 +182,25 @@ void EditorTweaks::OnRelease(bool appShutDown)
         cbEditor* ed=em->GetBuiltinEditor(i);
         if(ed && ed->GetControl())
             ed->GetControl()->Disconnect(wxEVT_NULL,(wxObjectEventFunction) (wxEventFunction) (wxCharEventFunction)&EditorTweaks::OnKeyPress);
+    }
+
+
+    AlignerMenuEntry e;
+
+    ConfigManager *cfg = Manager::Get()->GetConfigManager(_T("EditorTweaks"));
+    std::sort (AlignerMenuEntries.begin(), AlignerMenuEntries.end(),CompareAlignerMenuEntryObject);
+    std::reverse( AlignerMenuEntries.begin(), AlignerMenuEntries.end());
+    int i = 0;
+    for(; i<MaxStoreAlignerdEntries ; i++)
+    {
+        cfg->Write(wxString::Format(_T("AlignerFirstName%d"),i),AlignerMenuEntries[i].MenuName);
+        cfg->Write(wxString::Format(_T("AlignerFirstArgumentString%d"),i) ,AlignerMenuEntries[i].ArgumentString);
+
+        Disconnect(AlignerMenuEntries[i].id, wxEVT_COMMAND_MENU_SELECTED,  wxCommandEventHandler(EditorTweaks::OnAlign) );
+    }
+    for(; i<AlignerMenuEntries.size() ; i++)
+    {
+        Disconnect(AlignerMenuEntries[i].id, wxEVT_COMMAND_MENU_SELECTED,  wxCommandEventHandler(EditorTweaks::OnAlign) );
     }
 }
 
@@ -347,14 +395,31 @@ void EditorTweaks::BuildModuleMenu(const ModuleType type, wxMenu* menu, const Fi
     //and append any items you need in the menu...
     //TIP: for consistency, add a separator as the first item...
 
-    return; //DISABLED!!
-
+    //make sure we have an editor
     if(type!=mtEditorManager)
         return;
     cbEditor* ed = Manager::Get()->GetEditorManager()->GetBuiltinActiveEditor();
     if(!ed || !ed->GetControl())
         return;
 
+    // build aligner menu and items
+    wxMenu* alignerMenu = new wxMenu();
+
+    std::sort (AlignerMenuEntries.begin(), AlignerMenuEntries.end(),CompareAlignerMenuEntryObject);
+    std::reverse( AlignerMenuEntries.begin(), AlignerMenuEntries.end());
+
+    for ( unsigned int i = 0; i < AlignerMenuEntries.size() ; i++ )
+        alignerMenu->Append(AlignerMenuEntries[i].id, AlignerMenuEntries[i].MenuName + _T("\t")  + _T("[") + AlignerMenuEntries[i].ArgumentString + _T("]"));
+    alignerMenu->AppendSeparator();
+    alignerMenu->Append(id_et_align_others, _T("more ..."));
+
+    // attach aligner menu
+    menu->AppendSeparator();
+    menu->Append(wxID_ANY, _T("Aligner"), alignerMenu);
+
+    return; //DISABLED ALL OF THE STUFF BELOW (IT IS ALREADY IN THE MAIN MENU BAR)
+
+    // build "editor tweaks" menu
     wxMenu *submenu=new wxMenu(); //_("Editor Tweaks")
 
     menu->Append(id_et,_("Editor Tweaks"),submenu);
@@ -414,6 +479,7 @@ void EditorTweaks::BuildModuleMenu(const ModuleType type, wxMenu* menu, const Fi
 
     submenu->Append( id_et_EnsureConsistentEOL, _( "Make EOLs Consistent Now" ), _( "Convert End-of-Line Characters to the Active Setting" ) );
 
+    menu->Append(wxID_ANY, _T("Editor Tweaks"), submenu);
 
 }
 
@@ -429,6 +495,7 @@ void EditorTweaks::OnWordWrap(wxCommandEvent &event)
         ed->GetControl()->SetWrapMode(wxSCI_WRAP_NONE);
     else
         ed->GetControl()->SetWrapMode(wxSCI_WRAP_WORD);
+
 
 }
 
@@ -585,14 +652,14 @@ void EditorTweaks::OnEOLLF(wxCommandEvent &event)
 void EditorTweaks::OnFold(wxCommandEvent &event)
 {
     int level=event.GetId()-id_et_Fold1;
-    Manager::Get()->GetLogManager()->Log(wxString::Format(_("Fold at level %i"),level));
+    Manager::Get()->GetLogManager()->DebugLog(wxString::Format(_("Fold at level %i"),level));
     DoFoldAboveLevel(level,1);
 }
 
 void EditorTweaks::OnUnfold(wxCommandEvent &event)
 {
     int level=event.GetId()-id_et_Unfold1;
-    Manager::Get()->GetLogManager()->Log(wxString::Format(_("Unfold at level %i"),level));
+    Manager::Get()->GetLogManager()->DebugLog(wxString::Format(_("Unfold at level %i"),level));
     DoFoldAboveLevel(level,0);
 }
 
@@ -635,3 +702,182 @@ void EditorTweaks::DoFoldAboveLevel(int level, int fold)
         ed->GetControl()->ToggleFold(line);
     }
 }
+
+
+void EditorTweaks::OnAlign(wxCommandEvent& event)
+{
+    int id = event.GetId();
+    for ( unsigned int i = 0 ; i < AlignerMenuEntries.size(); i++)
+        if ( AlignerMenuEntries[i].id == id )
+        {
+            AlignToString(AlignerMenuEntries[i].ArgumentString);
+            AlignerMenuEntries[i].UsageCount ++;
+            break;
+        }
+}
+
+void EditorTweaks::OnAlignOthers(wxCommandEvent& event)
+{
+    wxString NewAlignmentString;
+    wxString NewAlignmentStringName;
+    bool NewCharacter = true;
+
+    // create the name and call the first DialogBox
+    const wxString MessageArgumentString = _T("Insert a new character");
+    const wxString CaptionArgumentString = _T("New character");
+    NewAlignmentString = wxGetTextFromUser( MessageArgumentString, CaptionArgumentString );
+    if(NewAlignmentString !=_T(""))
+    {
+        // check if the new character is equal as an exist
+        unsigned int i;
+        for ( i = 0 ; i < AlignerMenuEntries.size(); i++)
+        {
+            if(AlignerMenuEntries[i].ArgumentString == NewAlignmentString)
+            {
+                NewCharacter = false;
+                break;
+            }
+        }
+
+        if(NewCharacter)
+        {
+            AlignerMenuEntry e;
+            e.UsageCount = 0;
+            e.id = wxNewId();
+            e.ArgumentString = NewAlignmentString;
+            AlignerMenuEntries.push_back(e);
+            Connect(e.id, wxEVT_COMMAND_MENU_SELECTED,  wxCommandEventHandler(EditorTweaks::OnAlign) );
+        }
+
+        // create the name and call the second DialogBox
+        const wxString MessageName = _T("Insert a name for the (new) character");
+        const wxString CaptionName = NewAlignmentString;
+        NewAlignmentStringName = wxGetTextFromUser( MessageName, CaptionName , AlignerMenuEntries[i].MenuName);
+        if(NewAlignmentStringName != _T(""))
+            AlignerMenuEntries[i].MenuName = NewAlignmentStringName;
+
+        AlignToString(AlignerMenuEntries[i].ArgumentString);
+        AlignerMenuEntries[i].UsageCount++;
+    }
+}
+
+void EditorTweaks::AlignToString(const wxString AlignmentString)
+{
+    cbStyledTextCtrl* control = Manager::Get()->GetEditorManager()->GetBuiltinActiveEditor()->GetControl();
+    if (control)
+    {
+        int line_start = wxSCI_INVALID_POSITION;
+        int line_end   = wxSCI_INVALID_POSITION;
+        if (GetSelectionLines(line_start, line_end))
+        {
+            // get furthest position of alignmentstring
+            size_t find_position  = wxString::npos;
+            size_t max_position   = wxString::npos;
+            int matches           = 0;
+            for (int i=line_start;i<=line_end;i++)
+            {
+            	// look for string
+            	find_position = control->GetLine(i).Find(AlignmentString);
+
+                // store max position
+                if (find_position != wxString::npos)
+                {
+                	matches++;
+					if ((int) find_position > (int) max_position)
+					{
+						max_position = find_position;
+					}
+                }
+			}
+
+            // if string has been found more than once
+            if (matches > 1)
+            {
+				// loop through lines
+				wxString replacement_text = _T("");
+				wxString current_line     = _T("");
+				int spacing_diff          = 0;
+				for (int i=line_start;i<=line_end;i++)
+				{
+					// get line
+					current_line = control->GetLine(i);
+					if ( i == line_end )
+                        current_line = current_line.Trim();
+
+
+					// look for string
+					find_position = current_line.Find(AlignmentString);
+
+					// insert spacing
+					if (find_position != wxString::npos)
+					{
+						spacing_diff = (int) max_position - (int) find_position;
+						if (spacing_diff > 0)
+						{
+							// assemble next part of replacement string
+							current_line = current_line.insert(find_position, GetPadding(_T(" "), spacing_diff));
+						}
+					}
+
+					// tack on line
+					replacement_text += current_line;
+				}
+
+				// start undo
+				control->BeginUndoAction();
+
+				// get character positions of true selection start and end
+				int pos_start = control->PositionFromLine(line_start);
+				int pos_end   = control->GetLineEndPosition(line_end);
+
+				// select all lines properly
+				control->SetSelectionVoid(pos_start, pos_end);
+
+				// replace with replacement string
+				control->ReplaceSelection(replacement_text);
+
+				// finish undo
+				control->EndUndoAction();
+            }
+        }
+    }
+}
+
+wxString EditorTweaks::GetPadding(const wxString& Padding, const int Count)
+{
+	wxString padding = _T("");
+	for (int i=0;i<Count;i++)
+	{
+		padding += Padding;
+	}
+	return padding;
+}
+
+bool EditorTweaks::GetSelectionLines(int& LineStart, int& LineEnd)
+{
+    bool found_lines = false;
+
+    cbEditor* editor = Manager::Get()->GetEditorManager()->GetBuiltinActiveEditor();
+    if ( (editor) && (editor->HasSelection()) )
+    {
+        cbStyledTextCtrl* control = editor->GetControl();
+
+        if (control)
+        {
+            int line_start = control->GetSelectionStart();
+            int line_end   = control->GetSelectionEnd();
+
+			if ( (line_start != wxSCI_INVALID_POSITION) && (line_end != wxSCI_INVALID_POSITION) )
+			{
+				LineStart   = control->LineFromPosition(line_start);
+				LineEnd     = control->LineFromPosition(line_end);
+				found_lines = (line_end > line_start);
+			}
+        }
+    }
+
+    // done
+    return found_lines;
+}
+
+

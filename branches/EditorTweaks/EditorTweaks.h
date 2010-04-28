@@ -19,6 +19,16 @@
 
 #include <cbplugin.h> // for "class cbPlugin"
 
+
+class AlignerMenuEntry
+{
+    public:
+        int UsageCount;
+        int id;
+        wxString MenuName;
+        wxString ArgumentString;
+};
+
 class EditorTweaks : public cbPlugin
 {
     public:
@@ -117,6 +127,15 @@ class EditorTweaks : public cbPlugin
         void UpdateUI();
 
 //        void EditorEventHook(cbEditor* editor, wxScintillaEvent& event);
+    private:
+        void OnAlign(wxCommandEvent& event);
+		void OnAlignOthers(wxCommandEvent& event);
+		void AlignToString(const wxString AlignmentString);
+		wxString GetPadding(const wxString& Padding, const int Count);
+		bool GetSelectionLines(int& LineStart, int& LineEnd);
+
+		std::vector<AlignerMenuEntry> AlignerMenuEntries;
+
     private:
         int m_EditorHookId;
         wxMenu *m_tweakmenu;

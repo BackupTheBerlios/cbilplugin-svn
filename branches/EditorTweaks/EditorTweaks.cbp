@@ -7,10 +7,13 @@
 		<Option compiler="gcc" />
 		<Build>
 			<Target title="default">
-				<Option output="EditorTweaks" prefix_auto="1" extension_auto="1" />
-				<Option type="3" />
-				<Option compiler="gcc" />
-				<Option host_application="$(#cb)\devel\codeblocks.exe" />
+				<Option output="..\..\..\devel\share\CodeBlocks\plugins\EditorTweaks" prefix_auto="1" extension_auto="1" />
+				<Option working_dir="..\..\..\devel" />
+				<Option object_output="..\..\..\.objs\plugins\contrib\EditorTweaks" />
+ 				<Option type="3" />
+ 				<Option compiler="gcc" />
+				<Option parameters="--debug-log --no-check-associations -ns -nd" />
+				<Option host_application=".\codeblocks.exe" />
 				<Compiler>
 					<Add option="-g" />
 					<Add option="-pipe" />
@@ -26,8 +29,8 @@
 					<Add option="-DCB_PRECOMP" />
 					<Add option="-DWX_PRECOMP" />
 					<Add option="-DwxUSE_UNICODE" />
-					<Add directory="$(#cb)\include" />
-					<Add directory="$(#cb)\include\wxscintilla\include" />
+					<Add directory="..\..\..\include" />
+					<Add directory="..\..\..\sdk\wxscintilla\include" />
 					<Add directory="$(#wx.include)" />
 					<Add directory="$(#wx.lib)\gcc_dll\mswu" />
 				</Compiler>
@@ -35,15 +38,17 @@
 					<Add library="codeblocks" />
 					<Add library="wxmsw28u" />
 					<Add library="wxscintilla" />
-					<Add directory="$(#cb)\devel" />
+					<Add directory="..\..\..\devel" />
 					<Add directory="$(#wx.lib)\gcc_dll" />
 				</Linker>
 				<ExtraCommands>
-					<Add after="zip -j9 EditorTweaks.zip manifest.xml" />
-					<Add after="zip -j9 EditorTweaks.cbplugin EditorTweaks.dll EditorTweaks.zip" />
+					<Add after="zip -j9 ..\..\..\devel\share\CodeBlocks\EditorTweaks.zip manifest.xml" />
 				</ExtraCommands>
 			</Target>
 		</Build>
+		<VirtualTargets>
+			<Add alias="All" targets="default;" />
+		</VirtualTargets>
 		<Unit filename="EditorTweaks.cpp" />
 		<Unit filename="EditorTweaks.h" />
 		<Unit filename="manifest.xml" />

@@ -7,16 +7,18 @@
 		<Option compiler="gcc" />
 		<Build>
 			<Target title="default">
-				<Option output="EditorTweaks" prefix_auto="1" extension_auto="1" />
+				<Option output="../../../devel/share/CodeBlocks/plugins/EditorTweaks" prefix_auto="1" extension_auto="1" />
+				<Option working_dir="../../../devel" />
 				<Option type="3" />
 				<Option compiler="gcc" />
-				<Option host_application="codeblocks" />
+				<Option parameters="--debug-log --no-check-associations -ns -nd" />
+				<Option host_application="./codeblocks" />
 				<Compiler>
 					<Add option="-g" />
 					<Add option="`pkg-config --cflags codeblocks`" />
 					<Add option="`wx-config --cflags`" />
 					<Add directory="../../../include" />
-					<Add directory="../../../include/wxscintilla/include" />
+					<Add directory="../../../sdk/wxscintilla/include" />
 				</Compiler>
 				<Linker>
 					<Add option="`wx-config --libs`" />
@@ -25,11 +27,13 @@
 					<Add directory="../../../devel" />
 				</Linker>
 				<ExtraCommands>
-					<Add after="zip -j9 EditorTweaks.zip manifest.xml" />
-					<Add after="zip -j9 EditorTweaks.cbplugin EditorTweaks.so EditorTweaks.zip" />
+					<Add after="zip -j9 ../../../devel/share/CodeBlocks/EditorTweaks.zip manifest.xml" />
 				</ExtraCommands>
 			</Target>
 		</Build>
+		<VirtualTargets>
+			<Add alias="All" targets="default;" />
+		</VirtualTargets>
 		<Unit filename="EditorTweaks.cpp" />
 		<Unit filename="EditorTweaks.h" />
 		<Unit filename="manifest.xml" />

@@ -157,12 +157,14 @@ void PipedProcessCtrl::SyncOutput(int maxchars)
         start=m_textctrl->GetSelectionStart();
         end=m_textctrl->GetSelectionEnd();
         int pos=start>end?start:end;
-        bool move_caret=(pos==m_textctrl->PositionAfter(pos))||(start!=end);
+        bool move_caret=(pos>=m_textctrl->PositionFromLine(m_textctrl->GetLineCount())&&
+                         (start==end));
         m_textctrl->AppendText(m_latest);
         if(move_caret)
         {
-            m_textctrl->SetSelectionStart(-1);
-            m_textctrl->SetSelectionEnd(-1);
+                m_textctrl->GotoLine(m_textctrl->GetLineCount());
+//                m_textctrl->SetSelectionStart(-1);
+//                m_textctrl->SetSelectionEnd(-1);
         }
         if(oneshot)
             break;
@@ -180,13 +182,15 @@ void PipedProcessCtrl::SyncOutput(int maxchars)
             start=m_textctrl->GetSelectionStart();
             end=m_textctrl->GetSelectionEnd();
             int pos=start>end?start:end;
-            bool move_caret=(pos==m_textctrl->PositionAfter(pos))||(start!=end);
+            bool move_caret=(pos>=m_textctrl->PositionFromLine(m_textctrl->GetLineCount())&&
+                             (start==end));
             int style_start=m_textctrl->PositionFromLine(m_textctrl->GetLineCount());
             m_textctrl->AppendText(m_latest);
             if(move_caret)
             {
-                m_textctrl->SetSelectionStart(-1);
-                m_textctrl->SetSelectionEnd(-1);
+                m_textctrl->GotoLine(m_textctrl->GetLineCount());
+//                m_textctrl->SetSelectionStart(-1);
+//                m_textctrl->SetSelectionEnd(-1);
             }
 
             m_textctrl->StartStyling(style_start,0x1F);

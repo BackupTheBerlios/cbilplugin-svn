@@ -39,6 +39,7 @@ int ID_FILEMOVE=wxNewId();
 int ID_FILEDELETE=wxNewId();
 int ID_FILERENAME=wxNewId();
 int ID_FILEEXPANDALL=wxNewId();
+int ID_FILECOLLAPSEALL=wxNewId();
 int ID_FILESETTINGS=wxNewId();
 int ID_FILESHOWHIDDEN=wxNewId();
 int ID_FILEPARSECVS=wxNewId();
@@ -237,11 +238,9 @@ FileTreeCtrl::~FileTreeCtrl()
 void FileTreeCtrl::OnKeyDown(wxKeyEvent &event)
 {
     if(event.GetKeyCode()==WXK_DELETE)
-    {
         ::wxPostEvent(GetParent(),event);
-//        event.Skip(true);
-//        event.Allow();
-    }
+    else
+        event.Skip(true);
 }
 
 int FileTreeCtrl::OnCompareItems(const wxTreeItemId& item1, const wxTreeItemId& item2)
@@ -272,6 +271,7 @@ BEGIN_EVENT_TABLE(FileExplorer, wxPanel)
     EVT_MENU(ID_FILEDELETE,FileExplorer::OnDelete)
     EVT_MENU(ID_FILERENAME,FileExplorer::OnRename)
     EVT_MENU(ID_FILEEXPANDALL,FileExplorer::OnExpandAll)
+    EVT_MENU(ID_FILECOLLAPSEALL,FileExplorer::OnCollapseAll)
     EVT_MENU(ID_FILESETTINGS,FileExplorer::OnSettings)
     EVT_MENU(ID_FILESHOWHIDDEN,FileExplorer::OnShowHidden)
     EVT_MENU(ID_FILEPARSECVS,FileExplorer::OnParseCVS)
@@ -353,10 +353,8 @@ FileExplorer::FileExplorer(wxWindow *parent,wxWindowID id,
 
 FileExplorer::~FileExplorer()
 {
-    std::cout<<"file explorer destruction"<<std::endl;
     m_kill=true;
     m_updatetimer->Stop();
-    std::cout<<"pre deleting monitor"<<std::endl;
     delete m_dir_monitor;
     WriteConfig();
     UpdateAbort();
@@ -591,12 +589,10 @@ static int up_count=0;
 
 void FileExplorer::OnTimerCheckUpdates(wxTimerEvent &e)
 {
-    std::cout<<"start check OnTimerCheckUpdates"<<std::endl;
     if(m_kill)
         return;
     if(m_update_active)
         return;
-    std::cout<<"start OnTimerCheckUpdates"<<std::endl;
     wxTreeItemId ti;
     while(m_update_queue->Pop(ti))
     {
@@ -606,12 +602,9 @@ void FileExplorer::OnTimerCheckUpdates(wxTimerEvent &e)
         m_updater=new FileExplorerUpdater(this);
         m_updated_node=ti;
         m_update_active=true;
-        std::cout<<"begin update call OnTimerCheckUpdates"<<std::endl;
         m_updater->Update(m_updated_node);
-        std::cout<<"end update call OnTimerCheckUpdates"<<std::endl;
         break;
     }
-    std::cout<<"end OnTimerCheckUpdates"<<std::endl;
 }
 
 bool FileExplorer::ValidateRoot()
@@ -632,7 +625,6 @@ bool FileExplorer::ValidateRoot()
 
 void FileExplorer::OnUpdateTreeItems(wxCommandEvent &e)
 {
-    std::cout<<"start OnUpdateTreeItems"<<std::endl;
     if(m_kill)
         return;
     m_updater->Wait();
@@ -716,7 +708,6 @@ void FileExplorer::OnUpdateTreeItems(wxCommandEvent &e)
     m_updatetimer->Start(10,true);
     // Restart the monitor (TODO: move this elsewhere??)
     ResetDirMonitor();
-    std::cout<<"end OnUpdateTreeItems"<<std::endl;
 }
 
 bool FileExplorer::AddTreeItems(const wxTreeItemId &ti)
@@ -1115,12 +1106,6 @@ void FileExplorer::OnActivate(wxTreeEvent &event)
     if(m_Tree->GetItemImage(event.GetItem())==fvsFolder)
     {
         event.Skip(true);
-//        if(!SetRootFolder(filename)) // this causes crash...
-//            return;
-//        m_Loc->Insert(m_root,0);
-//        if(m_Loc->GetCount()>10)
-//            m_Loc->Delete(10);
-//        return;
         return;
     }
     EditorManager* em = Manager::Get()->GetEditorManager();
@@ -1189,9 +1174,8 @@ void FileExplorer::OnRightClick(wxTreeEvent &event)
             {
                 ftd->SetKind(FileTreeData::ftdkFolder);
                 m_Popup->Append(ID_SETLOC,_T("Make roo&t"));
-                #ifndef __WXMSW__
-        //        m_Popup->Append(ID_FILEEXPANDALL,_T("Expand All Children")); //TODO: check availability in wx2.8 for win32 (not avail wx2.6)
-                #endif
+                m_Popup->Append(ID_FILEEXPANDALL,_T("Expand All Children")); //TODO: check availability in wx2.8 for win32 (not avail wx2.6)
+                m_Popup->Append(ID_FILECOLLAPSEALL,_T("Collapse All Children")); //TODO: check availability in wx2.8 for win32 (not avail wx2.6)
                 m_Popup->Append(ID_FILEMAKEFAV,_T("Add to Favorites"));
                 m_Popup->Append(ID_FILENEWFILE,_T("New File..."));
                 m_Popup->Append(ID_FILENEWFOLDER,_T("New Directory..."));
@@ -1520,9 +1504,12 @@ void FileExplorer::OnRename(wxCommandEvent &event)
 
 void FileExplorer::OnExpandAll(wxCommandEvent &event)
 {
-//    #ifndef __WXMSW__
-////    m_Tree->ExpandAll(m_Tree->GetSelection());
-//    #endif
+    m_Tree->ExpandAllChildren(m_Tree->GetSelection());
+}
+
+void FileExplorer::OnCollapseAll(wxCommandEvent &event)
+{
+    m_Tree->CollapseAllChildren(m_Tree->GetSelection());
 }
 
 void FileExplorer::OnSettings(wxCommandEvent &event)

@@ -64,8 +64,9 @@
 		<Compiler>
 			<Add option="-Wall" />
 			<Add option="-g" />
+			<Add option="`pkg-config --cflags codeblocks`" />
 			<Add option="`wx-config --cflags`" />
-			<Add option="`pkg-config --cflags gio-2.0`" />
+			<Add option="`pkg-config --cflags gamin`" />
 			<Add option="-fmessage-length=0" />
 			<Add option="-fexceptions" />
 			<Add option="-Winvalid-pch" />
@@ -80,7 +81,6 @@
 		</Compiler>
 		<Linker>
 			<Add option="`wx-config --libs`" />
-			<Add option="`pkg-config --libs gio-2.0`" />
 			<Add option="`pkg-config --libs gamin`" />
 			<Add library="codeblocks" />
 			<Add directory="../../../devel" />

@@ -6,8 +6,6 @@
 #include <wx/combobox.h>
 #include <wx/dynarray.h>
 
-
-
 #include <vector>
 #include "FileExplorerSettings.h"
 #include "FileExplorerUpdater.h"
@@ -94,6 +92,7 @@ private:
     void OnDelete(wxCommandEvent &event);
     void OnRename(wxCommandEvent &event);
     void OnExpandAll(wxCommandEvent &event);
+    void OnCollapseAll(wxCommandEvent &event);
     void OnSettings(wxCommandEvent &event);
     void OnShowHidden(wxCommandEvent &event);
     void OnParseCVS(wxCommandEvent &event);

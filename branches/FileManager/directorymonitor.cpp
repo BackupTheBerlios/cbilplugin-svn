@@ -198,13 +198,10 @@ public:
                             case FAMExists:
                                 break;
                             case FAMAcknowledge:
-                                std::cout<<"cancellation acknowledgment ";
                                 if(fe.userdata)
                                 {
-                                    std::cout<<((wxString*)fe.userdata)->c_str();
                                     delete (wxString*)fe.userdata;
                                 }
-                                std::cout<<std::endl;
                                 m_active_count--;
                                 break;
 //                            case ?????:
@@ -226,7 +223,6 @@ public:
             {
                 char c;
                 read(m_msg_rcv, &c, 1);
-                std::cout<<"received message "<<c<<std::endl;
                 switch(c)
                 {
                     case 'm':
@@ -243,10 +239,6 @@ public:
                 }
             }
         }
-
-
-        std::cout<<"monitor main loop ended"<<std::endl;
-
         return NULL;
     }
 
@@ -276,7 +268,6 @@ public:
             m_update_paths.Add(paths[i].c_str());
         char m='m';
         write(m_msg_send,&m,1);
-        std::cout<<"sent thread a message "<<m<<std::endl;
         m_interrupt_mutex.Unlock();
 
     }
@@ -350,7 +341,6 @@ public:
     static gboolean tn_callback(GIOChannel *channel, GIOCondition cond, gpointer data)
     {
         DirMonitorThread *mon=(DirMonitorThread *)data;
-        std::cout<<"tn_callback received message "<<mon->m_msg_bytes_queued<<std::endl;
         mon->m_interrupt_mutex.Lock();
         char c;
 //        GError *err;
@@ -359,7 +349,6 @@ public:
         {
             read(mon->m_msg_rcv, &c, 1);
             mon->m_msg_bytes_queued--;
-            std::cout<<"tn_callback received message "<<c<<"bytes queued"<<mon->m_msg_bytes_queued<<std::endl;
             switch(c)
             {
                 case 'm':
@@ -445,8 +434,6 @@ public:
 
         g_main_loop_run(loop);
 
-        std::cout<<"monitor main loop ended"<<std::endl;
-
         m_interrupt_mutex.Lock();
         for(unsigned int i=0;i<m_pathnames.GetCount();i++)
         {
@@ -472,16 +459,14 @@ public:
         m_interrupt_mutex.Lock();
         m_active=false;
 //        g_main_loop_quit(loop);
-        std::cout<<"quitting dir monitor thread"<<std::endl;
         char m='q';
         m_msg_bytes_queued++;
         write(m_msg_send,&m,1);
         m_interrupt_mutex.Unlock();
         if(IsRunning())
         {
-            std::cout<<"waiting on quit message"<<std::endl;
             Wait();//Delete();
-        } else std::cout<<"no wait required"<<std::endl;
+        }
         close(m_msg_rcv);
         close(m_msg_send);
     }
@@ -554,7 +539,6 @@ public:
         gsize num;
         m_msg_bytes_queued++;
         write(m_msg_send,&m,1);
-        std::cout<<"sent thread a message "<<m<<" bytes queued "<<m_msg_bytes_queued<<std::endl;
         //flush(m_msg_send);
 //        GIOStatus s=g_io_channel_write_chars(m_msg_send, &m, 1, &num,&err);
 //        if(s!=G_IO_STATUS_NORMAL)
@@ -706,7 +690,6 @@ public:
         m_interrupt_mutex.Unlock();
 
         g_main_loop_run(loop);
-        std::cout<<"monitor main loop ended"<<std::endl;
 
         m_interrupt_mutex.Lock();
         for(unsigned int i=0;i<m_pathnames.GetCount();i++)
@@ -722,12 +705,10 @@ public:
 
         g_main_context_unref(context);
         m_interrupt_mutex.Unlock();
-        std::cout<<"returning from monitor thread"<<std::endl;
         return NULL;
     }
     virtual ~DirMonitorThread()
     {
-        std::cout<<"start dirmonitorthread destructor"<<std::endl;
         m_active=false;
 //        g_main_loop_quit(loop);
         char m='q';
@@ -974,13 +955,6 @@ public:
 //            wxMessageBox(wxString::Format(_("message, code %i, bytes %i, path %s"),dwErrorCode, dwNumberOfBytesTransfered,mondata->m_path.c_str()));
         if(dwNumberOfBytesTransfered==0 || dwErrorCode>0) //mondata->m_cancel ||
         {
-            std::cout<<"LOG: FileIOCompletionRoutine Cancel "<<mondata->m_path.ToAscii()<<std::endl;
-            if(!mondata->m_cancel)
-            {
-                std::cout<<"LOG: FileIOCompletionRoutine Cancel Fail "<<mondata->m_path.ToAscii()<<std::endl;
-//                wxMessageBox(_("FileManager Directory Monitory is about to have a serious problem!"));
-            }
-            //wxMessageBox(_("canceling i/o ")+mondata->m_path);
             MonMap::iterator it=m_monmap.find(mondata->m_path);
             if(it!=m_monmap.end())
             {
@@ -1026,13 +1000,11 @@ public:
             m_parent->AddPendingEvent(e);
 
         }
-        std::cout<<"LOG: FileIOCompletionRoutine Read Request Restart "<<mondata->m_path.ToAscii()<<std::endl;
         mondata->ReadRequest(m_subtree);
     }
     static VOID CALLBACK FileIOCompletionRoutine(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered, LPOVERLAPPED lpOverlapped)
     {
         MonData *mondata=(MonData*)lpOverlapped;
-        std::cout<<"LOG: FileIOCompletionRoutine Fired "<<mondata->m_path.ToAscii()<<" code "<<dwErrorCode<<" bytes "<<dwNumberOfBytesTransfered<<std::endl;
         mondata->m_monitor->ReadChanges(dwErrorCode, dwNumberOfBytesTransfered, mondata);
     }
 
@@ -1051,7 +1023,6 @@ public:
 //MonData implementations
 MonData::MonData()
 {
-    std::cout<<"LOG: creating empty monitor structure"<<std::endl;
     m_path=_("");
     m_monitor=NULL;
     m_changedata=NULL;
@@ -1062,7 +1033,6 @@ MonData::MonData()
 
 MonData::MonData(DirMonitorThread *monitor, const wxString &path, bool subtree)
 {
-    std::cout<<"LOG: creating monitor for path "<<path.ToAscii()<<std::endl;
     MonData();
     m_monitor=monitor;
     m_path=path.c_str();
@@ -1071,12 +1041,10 @@ MonData::MonData(DirMonitorThread *monitor, const wxString &path, bool subtree)
     {
         m_overlapped=new_overlapped();
         m_changedata=(PFILE_NOTIFY_INFORMATION)(new char[4096]);
-        std::cout<<"LOG: successfully created monitor "<<m_path.ToAscii()<<std::endl;
         ReadRequest(subtree);
     } else
     {
         wxMessageBox(_("WARNING: Failed to open handle for ")+m_path);
-        std::cout<<"ERROR: created failed monitor "<<m_path.ToAscii()<<std::endl;
         m_handle=NULL;
         m_fail=true;
     }
@@ -1088,17 +1056,14 @@ void MonData::ReadCancel()
     {
         if(!::CancelIo(m_handle))
         {
-            std::cout<<"ERROR: read cancel failed for "<<m_path.ToAscii()<<std::endl;
             wxMessageBox(_("WARNING: Failed to initiate cancel io for ")+m_path);
             m_fail=true;
         }
         else
         {
-            std::cout<<"LOG: read cancel succeeded for "<<m_path.ToAscii()<<std::endl;
             m_cancel=true;
         }
-    } else
-        std::cout<<"LOG: redundant monitor read cancel request for "<<m_path.ToAscii()<<std::endl;
+    }
 }
 
 void MonData::ReadRequest(bool subtree)
@@ -1106,32 +1071,25 @@ void MonData::ReadRequest(bool subtree)
     if(!::ReadDirectoryChangesW(m_handle, m_changedata, 4096, subtree, DEFAULT_MONITOR_FILTER_WIN32, NULL, &m_overlapped, m_monitor->FileIOCompletionRoutine))
     {
         m_fail=true;
-        std::cout<<"ERROR: read changes failed for "<<m_path.ToAscii()<<std::endl;
-        wxMessageBox(_("WARNING: Failed to initiate read request for ")+m_path);
+//        wxMessageBox(_("WARNING: Failed to initiate read request for ")+m_path);
     }
     else
     {
-        std::cout<<"LOG: read changes initiated for "<<m_path.ToAscii()<<std::endl;
         m_fail=false;
     }
 }
 
 MonData::~MonData()
 {
-    std::cout<<"LOG: deleting monitor to "<<m_path.ToAscii()<<std::endl;
     if(m_handle)
     {
         if(!::CloseHandle(m_handle))
         {
-            std::cout<<"ERROR: failed to close handle for "<<m_path.ToAscii()<<std::endl;
-            wxMessageBox(_("WARNING: Failed to close monitor handle for ")+m_path);
+//            wxMessageBox(_("WARNING: Failed to close monitor handle for ")+m_path);
         }
-        else
-            std::cout<<"LOG: closed handle for "<<m_path.ToAscii()<<std::endl;
     }
     if(m_changedata)
         delete m_changedata;
-    std::cout<<"LOG: succesfully delete monitor for "<<m_path.ToAscii()<<std::endl;
 }
 
 OVERLAPPED MonData::new_overlapped()

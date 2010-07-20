@@ -561,10 +561,6 @@ void FileExplorer::ResetDirMonitor()
 {
     wxArrayString paths;
     GetExpandedPaths(m_Tree->GetRootItem(),paths);
-//    wxString outstr=_("Starting monitor on\n");
-//    for(int i=0;i<paths.GetCount();i++)
-//        outstr+=paths[i]+_("\n");
-//    cbMessageBox(outstr);
     m_dir_monitor->ChangePaths(paths);
 }
 
@@ -572,6 +568,7 @@ void FileExplorer::OnDirMonitor(wxDirectoryMonitorEvent &e)
 {
     if(m_kill)
         return;
+//  TODO: Apparently creating log messages during Code::Blocks shutdown can create segfaults
 //    LogMessage(wxString::Format(_T("Dir Event: %s,%i,%s"),e.m_mon_dir.c_str(),e.m_event_type,e.m_info_uri.c_str()));
     if(e.m_event_type==MONITOR_TOO_MANY_CHANGES)
     {
@@ -584,8 +581,6 @@ void FileExplorer::OnDirMonitor(wxDirectoryMonitorEvent &e)
         m_updatetimer->Start(100,true);
     }
 }
-
-static int up_count=0;
 
 void FileExplorer::OnTimerCheckUpdates(wxTimerEvent &e)
 {
@@ -633,7 +628,6 @@ void FileExplorer::OnUpdateTreeItems(wxCommandEvent &e)
     if(m_updater_cancel || !ti.IsOk())
     { //NODE WAS DELETED - REFRESH NOW!
         //TODO: Should only need to clean up and restart the timer (no need to change queue)
-        LogMessage(wxString::Format(_("Cancelling update %i"),up_count));
         delete m_updater;
         m_updater=NULL;
         m_update_active=false;
@@ -643,8 +637,6 @@ void FileExplorer::OnUpdateTreeItems(wxCommandEvent &e)
             m_update_queue->Add(m_Tree->GetRootItem());
             m_updatetimer->Start(10,true);
         }
-        LogMessage(wxString::Format(_("update fail %i"),up_count));
-        up_count++;
         return;
     }
 //    cbMessageBox(_T("Node OK"));
@@ -703,7 +695,6 @@ void FileExplorer::OnUpdateTreeItems(wxCommandEvent &e)
 //    }
     delete m_updater;
     m_updater=NULL;
-    up_count++;
     m_update_active=false;
     m_updatetimer->Start(10,true);
     // Restart the monitor (TODO: move this elsewhere??)
@@ -977,6 +968,7 @@ void FileExplorer::OnEnterWild(wxCommandEvent &event)
             m_WildCards->Delete(i);
             m_WildCards->Insert(wild,0);
             m_WildCards->SetSelection(0);
+            RefreshExpanded(m_Tree->GetRootItem());
             return;
         }
     }

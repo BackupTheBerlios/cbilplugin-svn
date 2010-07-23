@@ -315,11 +315,11 @@ bool FileExplorerUpdater::ParseSVNstate(const wxString &path, VCSstatearray &sa)
                 break;
         }
 #ifdef __WXMSW__
-        wxFileName f(output[i].Mid(7));
+        wxFileName f(output[i].Mid(1).Strip(wxString::both));
         f.MakeAbsolute(path);
         s.path=f.GetFullPath();
 #else
-        s.path=wxFileName(output[i].Mid(7)).GetFullPath();
+        s.path=wxFileName(output[i].Mid(1).Strip(wxString::both)).GetFullPath();
 #endif
         sa.Add(s);
     }

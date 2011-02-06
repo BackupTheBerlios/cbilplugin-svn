@@ -63,7 +63,7 @@ class CmdConfigDialog : public wxDialog
 		CmdConfigDialog( wxWindow* parent, ToolsPlus* plugin);
         virtual ~CmdConfigDialog() {}
 
-        wxString GetTitle() const { return _("Tools Plus"); }
+        wxString GetTitle() const { return _("User-defined Tools"); }
         wxString GetBitmapBaseName() const { return _T("ToolsPlus"); }
         void OnApply();
         void OnCancel(){}
@@ -116,6 +116,7 @@ class CmdConfigDialog : public wxDialog
 		wxStaticText* m_staticText1111;
 		wxChoice* m_envvars;
 		wxWindow *m_prop_panel;
+		wxCheckBox *m_replace_tools;
     DECLARE_EVENT_TABLE()
 
 };

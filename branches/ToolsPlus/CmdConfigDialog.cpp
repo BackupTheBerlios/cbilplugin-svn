@@ -47,14 +47,28 @@ CmdConfigDialog::CmdConfigDialog( wxWindow* parent, ToolsPlus* plugin) : wxDialo
 	wxBoxSizer* main_sizer;
 	main_sizer = new wxBoxSizer( wxVERTICAL );
 
-    wxBoxSizer *form_sizer=new wxBoxSizer( wxHORIZONTAL);
+    wxNotebook *nb=new wxNotebook(this,wxID_ANY);
+    wxPanel *tools_panel=new wxPanel(nb);
+    wxPanel *settings_panel=new wxPanel(nb);
+    nb->AddPage(tools_panel,_("Tools"),true);
+    nb->AddPage(settings_panel,_("Plugin Settings"),false);
+
+    wxBoxSizer *tools_sizer=new wxBoxSizer( wxHORIZONTAL);
+    wxBoxSizer *settings_sizer=new wxBoxSizer( wxHORIZONTAL);
     wxBoxSizer *list_sizer=new wxBoxSizer( wxVERTICAL );
 	wxBoxSizer *p_sizer=new wxBoxSizer( wxVERTICAL );
-	form_sizer->Add(list_sizer,1,wxALL|wxEXPAND,20);
-	form_sizer->Add(p_sizer,1,wxALL|wxEXPAND,20);
-    main_sizer->Add(form_sizer,1,wxALL|wxEXPAND,5);
+	tools_sizer->Add(list_sizer,1,wxALL|wxEXPAND,20);
+	tools_sizer->Add(p_sizer,1,wxALL|wxEXPAND,20);
+    tools_panel->SetSizer(tools_sizer);
+    settings_panel->SetSizer(settings_sizer);
+    main_sizer->Add(nb,1,wxALL|wxEXPAND,5);
 
-    m_prop_panel=new wxPanel(this);
+    m_replace_tools=new wxCheckBox(settings_panel,wxID_ANY,_("Replace Tools menu with Tools Plus"));
+    ConfigManager* cfg = Manager::Get()->GetConfigManager(_T("ShellExtensions"));
+    m_replace_tools->SetValue(cfg->ReadBool(_T("HideToolsMenu"),false));
+    settings_sizer->Add(m_replace_tools);
+
+    m_prop_panel=new wxPanel(tools_panel);
 	wxBoxSizer *prop_sizer=new wxBoxSizer( wxVERTICAL );
     m_prop_panel->SetSizer(prop_sizer);
 	p_sizer->Add(m_prop_panel,1,wxEXPAND);
@@ -68,10 +82,10 @@ CmdConfigDialog::CmdConfigDialog( wxWindow* parent, ToolsPlus* plugin) : wxDialo
 	wxBoxSizer* bSizer_toprow;
 	bSizer_toprow = new wxBoxSizer( wxHORIZONTAL );
 
-	m_staticText27 = new wxStaticText( this, wxID_ANY, wxT("Known Tools"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText27 = new wxStaticText( tools_panel, wxID_ANY, wxT("Known Tools"), wxDefaultPosition, wxDefaultSize, 0 );
 	bSizer43->Add( m_staticText27, 0, wxALL, 5 );
 
-	m_commandlist = new wxListBox( this, ID_COMMANDLIST, wxDefaultPosition, wxDefaultSize, 0, NULL, 0 );
+	m_commandlist = new wxListBox( tools_panel, ID_COMMANDLIST, wxDefaultPosition, wxDefaultSize, 0, NULL, 0 );
 	bSizer43->Add( m_commandlist, 1, wxALL|wxEXPAND, 1 );
 
 	bSizer40->Add( bSizer43, 1, wxEXPAND, 5 );
@@ -79,29 +93,29 @@ CmdConfigDialog::CmdConfigDialog( wxWindow* parent, ToolsPlus* plugin) : wxDialo
 	wxBoxSizer* bSizer11;
 	bSizer11 = new wxBoxSizer( wxVERTICAL );
 
-	m_butnew = new wxButton( this, ID_NEW, wxT("New"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_butnew = new wxButton( tools_panel, ID_NEW, wxT("New"), wxDefaultPosition, wxDefaultSize, 0 );
 	bSizer11->Add( m_butnew, 0, wxLEFT|wxRIGHT, 5 );
 
-	m_butcopy = new wxButton( this, ID_COPY, wxT("Copy"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_butcopy = new wxButton( tools_panel, ID_COPY, wxT("Copy"), wxDefaultPosition, wxDefaultSize, 0 );
 	bSizer11->Add( m_butcopy, 0, wxLEFT|wxRIGHT, 5 );
 
-	m_butdelete = new wxButton( this, ID_DELETE, wxT("Delete"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_butdelete = new wxButton( tools_panel, ID_DELETE, wxT("Delete"), wxDefaultPosition, wxDefaultSize, 0 );
 	bSizer11->Add( m_butdelete, 0, wxRIGHT|wxLEFT, 5 );
 
 	bSizer11->Add( 0, 10, 1, wxALL, 5 );
 
-	m_butup = new wxButton( this, ID_UP, wxT("Up"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_butup = new wxButton( tools_panel, ID_UP, wxT("Up"), wxDefaultPosition, wxDefaultSize, 0 );
 	bSizer11->Add( m_butup, 0, wxRIGHT|wxLEFT, 5 );
 
-	m_butdown = new wxButton( this, ID_DOWN, wxT("Down"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_butdown = new wxButton( tools_panel, ID_DOWN, wxT("Down"), wxDefaultPosition, wxDefaultSize, 0 );
 	bSizer11->Add( m_butdown, 0, wxRIGHT|wxLEFT, 5 );
 
 	bSizer11->Add( 0, 10, 1, wxALL, 5 );
 
-	wxButton *m_butimport = new wxButton( this, ID_IMPORT, wxT("Import..."), wxDefaultPosition, wxDefaultSize, 0 );
+	wxButton *m_butimport = new wxButton( tools_panel, ID_IMPORT, wxT("Import..."), wxDefaultPosition, wxDefaultSize, 0 );
 	bSizer11->Add( m_butimport, 0, wxRIGHT|wxLEFT, 5 );
 
-	wxButton *m_butexport = new wxButton( this, ID_EXPORT, wxT("Export..."), wxDefaultPosition, wxDefaultSize, 0 );
+	wxButton *m_butexport = new wxButton( tools_panel, ID_EXPORT, wxT("Export..."), wxDefaultPosition, wxDefaultSize, 0 );
 	bSizer11->Add( m_butexport, 0, wxRIGHT|wxLEFT, 5 );
 
 	bSizer40->Add( bSizer11, 0, wxEXPAND, 5 );
@@ -123,15 +137,15 @@ CmdConfigDialog::CmdConfigDialog( wxWindow* parent, ToolsPlus* plugin) : wxDialo
 
     wxBoxSizer *command_sizer=new wxBoxSizer(wxHORIZONTAL);
 	m_command = new wxTextCtrl( m_prop_panel, ID_COMMAND, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
-	m_command->SetToolTip(_T("m_prop_panel is the command line that will be executed by the Shell. The following variable substitions are accepted:\n\n$relfile,$file: respectively the relative and absolute name of a selected file\n$reldir, $dir: respectively the relative and absolute name of a selected directory\n$relpath,$path: the relative and absolute name of the selected file or directory\n$mpaths: a list of selected files or directories (absolute paths only)\n$fname,$fext: the name without extension and the extension without name of a selected file\n$inputstr{prompt}: prompts the user to enter a string of text which is subsituted into the command line\n\nRight clicking on a file, directory or multiple paths in the Project Tree, File Explorer or Editor Pane will only populate if m_prop_panel command handles that type of object.\nTo use relative path names make sure you set the working directory appropriately (typically use $parentdir)\nYou can also use global, project and codeblocks special variables"));
+	m_command->SetToolTip(_T("The command line to be executed. The following variable substitions are accepted:\n\n$relfile,$file: respectively the relative and absolute name of a selected file\n$reldir, $dir: respectively the relative and absolute name of a selected directory\n$relpath,$path: the relative and absolute name of the selected file or directory\n$mpaths: a list of selected files or directories (absolute paths only)\n$fname,$fext: the name without extension and the extension without name of a selected file\n$inputstr{prompt}: prompts the user to enter a string of text which is subsituted into the command line\n\nRight clicking on a file, directory or multiple paths in the Project Tree, File Explorer or Editor Pane will only populate if m_prop_panel command handles that type of object.\nTo use relative path names make sure you set the working directory appropriately (typically use $parentdir)\nYou can also use global, project and codeblocks special variables"));
 	command_sizer->Add(m_command,1,wxEXPAND);
 	prop_sizer->Add( command_sizer, 0, wxALL|wxEXPAND, 1 );
 
 	wxBoxSizer* wild_sizer=new wxBoxSizer( wxHORIZONTAL);
-	m_staticText28 = new wxStaticText( m_prop_panel, wxID_ANY, wxT("Filetypes:"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText28 = new wxStaticText( m_prop_panel, wxID_ANY, wxT("File Types:"), wxDefaultPosition, wxDefaultSize, 0 );
 	wild_sizer->Add( m_staticText28, 0, wxALIGN_LEFT|wxALL, 5 );
 	m_wildcards = new wxTextCtrl( m_prop_panel, ID_WILDCARDS, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
-	m_wildcards->SetToolTip(_T("The context menu will only be populated with the tool if the file or directory selected matches the semi-colon separated list of wildcards. For example \"*.cpp;*.h;makefile.*;Makefile.*\" to handle C++ sources, headers and makefiles. Leave blank to handle all file/directory types"));
+	m_wildcards->SetToolTip(_T("The context menu will only be populated with the tool if the file or directory selected matches the semi-colon separated list of wildcard expressions. For example \"*.cpp;*.h;makefile.*;Makefile.*\" to handle C++ sources, headers and makefiles. Leave blank to handle all file/directory types"));
 	wild_sizer->Add( m_wildcards, 1, wxALL, 1 );
 	prop_sizer->Add( wild_sizer, 0, wxEXPAND, 5 );
 
@@ -212,7 +226,7 @@ void CmdConfigDialog::OnApply()
     GetDialogItems();
     m_icperm->interps=m_ic.interps;
     m_icperm->WriteConfig();
-    m_plugin->UpdateMenu();
+    m_plugin->UpdateMenu(m_replace_tools->IsChecked());
 }
 
 void CmdConfigDialog::NameChange(wxCommandEvent& event)

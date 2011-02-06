@@ -123,7 +123,7 @@ class ToolsPlus : public cbPlugin
 
 
     public:
-        void UpdateMenu();
+        void UpdateMenu(bool replace_old_tools);
         void CreateMenu();
         void AddModuleMenuEntry(wxMenu *modmenu,int entrynum, int idref);
         void ShowConsole();
@@ -145,7 +145,9 @@ class ToolsPlus : public cbPlugin
 
 
 
-        wxMenu *m_ToolMenu;  // pointer to the interpreters menu
+        wxMenu *m_ToolMenu;  // pointer to the tools plus menu
+        wxMenu *m_OldToolMenu;  // pointer to the original tools menu
+        wxMenuBar *m_MenuBar;  // pointer to the main menu bar
         unsigned int m_interpnum;
         unsigned int m_contextactions[10];
         wxString m_wildcard;

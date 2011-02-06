@@ -15,6 +15,9 @@
 #endif
 
 #include <sdk.h>
+#ifndef CB_PRECOMP
+    #include <wx/wxscintilla.h>
+#endif
 #include "ShellCtrlBase.h"
 
 class PipedProcessCtrl;

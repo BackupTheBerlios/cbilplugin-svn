@@ -3,6 +3,7 @@
 #include <wx/regex.h>
 #include "PipedProcessCtrl.h"
 #include <globals.h>
+#include <cbeditor.h>
 
 ////////////////////////////////////// PipedProcessCtrl /////////////////////////////////////////////
 #define PP_ERROR_STYLE 1

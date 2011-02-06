@@ -160,7 +160,9 @@ void ToolsPlus::OnConfigure(wxCommandEvent& event)
     CmdConfigDialog *dlg = new CmdConfigDialog(NULL, this);
     int result=dlg->ShowModal();
     if(result==wxID_OK)
+    {
         dlg->OnApply();
+    }
     dlg->Destroy();
 }
 
@@ -509,7 +511,8 @@ int ToolsPlus::Configure()
 
 void ToolsPlus::CreateMenu()
 {
-    for(unsigned int i=0;i<m_ic.interps.size();i++)
+    unsigned int i;
+    for(i=0;i<m_ic.interps.size();i++)
     {
         wxString tail;
         if(m_ic.interps[i].command.Find(_T("$file"))>0||
@@ -549,6 +552,8 @@ void ToolsPlus::CreateMenu()
             menu->Append(ID_SubMenu_0+i,menuloc);
     }
     //m_ToolMenu->Append(ID_LaunchPythonProcess,_T("Launch Python Interpreter"),_T(""));
+    if(i>0)
+        m_ToolMenu->AppendSeparator();
     m_ToolMenu->Append(ID_ToolMenu_ShowConsole,_T("&Toggle Tool Output Window"),_T(""),wxITEM_CHECK);
     m_ToolMenu->Append(ID_ToolMenu_RemoveTerminated,_T("Close &Inactive Tool Pages"),_T(""));
     m_ToolMenu->Append(ID_ToolMenu_Configure,_T("&Configure Tools..."),_T(""));
@@ -583,19 +588,44 @@ void ToolsPlus::AddModuleMenuEntry(wxMenu *modmenu,int entrynum, int idref)
 }
 
 
-void ToolsPlus::UpdateMenu()
+void ToolsPlus::UpdateMenu(bool replace_old_tools)
 {
     //delete the old menu items
-    if(m_ToolMenu)
+    if(!m_ToolMenu)
+        return;
+    size_t count=m_ToolMenu->GetMenuItemCount();
+    for(size_t i=0;i<count;i++)
+        m_ToolMenu->Destroy(m_ToolMenu->FindItemByPosition(0));
+    CreateMenu();
+
+    ConfigManager* cfg = Manager::Get()->GetConfigManager(_T("ShellExtensions"));
+    cfg->Write(_T("HideToolsMenu"),replace_old_tools);
+    if(replace_old_tools && m_OldToolMenu==NULL)
     {
-//        for(unsigned int i=0;i<m_ic.interps.Len();i++)
-//            m_ToolMenu->Destroy(ID_SubMenu_0+i);
-//        m_ToolMenu->Destroy(ID_ToolMenu_ShowConsole);
-        size_t count=m_ToolMenu->GetMenuItemCount();
-        for(size_t i=0;i<count;i++)
-            m_ToolMenu->Destroy(m_ToolMenu->FindItemByPosition(0));
-        CreateMenu();
+        int pos = m_MenuBar->FindMenu(_T("Tools+"));
+        if(pos!=wxNOT_FOUND)
+        {
+            m_MenuBar->Remove(pos);
+        }
+        pos = m_MenuBar->FindMenu(_T("Tools"));
+        if(pos!=wxNOT_FOUND)
+        {
+            m_OldToolMenu=m_MenuBar->GetMenu(pos);
+            m_MenuBar->Remove(pos);
+            m_MenuBar->Insert(pos, m_ToolMenu, _T("&Tools"));
+        }            
     }
+    if(!replace_old_tools && m_OldToolMenu!=NULL)
+    {
+        int pos = m_MenuBar->FindMenu(_T("Tools"));
+        m_MenuBar->Remove(pos);
+        m_MenuBar->Insert(pos, m_OldToolMenu, _T("&Tools"));
+        m_OldToolMenu=NULL;
+        pos = m_MenuBar->FindMenu(_T("Plugins"));
+        if(pos!=wxNOT_FOUND)
+            m_MenuBar->Insert(pos, m_ToolMenu, _T("T&ools+"));            
+    }
+
 }
 
 void ToolsPlus::BuildMenu(wxMenuBar* menuBar)
@@ -604,15 +634,32 @@ void ToolsPlus::BuildMenu(wxMenuBar* menuBar)
 	//to add any menu items you want...
 	//Append any items you need in the menu...
 	//NOTE: Be careful in here... The application's menubar is at your disposal.
+	m_MenuBar=menuBar;
 	m_ToolMenu=new wxMenu;
 	CreateMenu();
-	int pos = menuBar->FindMenu(_T("Plugins"));
-	if(pos!=wxNOT_FOUND)
-        menuBar->Insert(pos, m_ToolMenu, _T("T&ools+"));
+    ConfigManager* cfg = Manager::Get()->GetConfigManager(_T("ShellExtensions"));
+    bool replace_old_tools=cfg->ReadBool(_T("HideToolsMenu"),false);
+    if(replace_old_tools)
+    {
+        int pos = menuBar->FindMenu(_T("Tools"));
+        if(pos!=wxNOT_FOUND)
+        {
+            m_OldToolMenu=menuBar->GetMenu(pos);
+            menuBar->Remove(pos);
+            menuBar->Insert(pos, m_ToolMenu, _T("&Tools"));
+        }        
+    }
     else
     {
-        delete m_ToolMenu;
-        m_ToolMenu=0;
+        m_OldToolMenu=NULL;
+        int pos = menuBar->FindMenu(_T("Plugins"));
+        if(pos!=wxNOT_FOUND)
+            menuBar->Insert(pos, m_ToolMenu, _T("T&ools+"));
+        else
+        {
+            delete m_ToolMenu;
+            m_ToolMenu=0;
+        }        
     }
 }
 

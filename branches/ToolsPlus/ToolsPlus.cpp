@@ -212,7 +212,7 @@ void ToolsPlus::OnSetTarget(wxCommandEvent& event)
 #else
         wild=_T("*");
 #endif
-    wxFileDialog *fd=new wxFileDialog(NULL,_T("Choose the Command Target"),_T(""),_T(""),wild,wxOPEN|wxFILE_MUST_EXIST);
+    wxFileDialog *fd=new wxFileDialog(NULL,_T("Choose the Command Target"),_T(""),_T(""),wild,wxFD_OPEN|wxFD_FILE_MUST_EXIST);
     if(fd->ShowModal()==wxID_OK)
     {
         m_RunTarget=fd->GetPath();
@@ -230,7 +230,7 @@ void ToolsPlus::OnSetMultiTarget(wxCommandEvent& event)
 #else
         wild=_T("*");
 #endif
-    wxFileDialog *fd=new wxFileDialog(NULL,_T("Choose the Command Targets"),_T(""),_T(""),wild,wxOPEN|wxFILE_MUST_EXIST|wxMULTIPLE);
+    wxFileDialog *fd=new wxFileDialog(NULL,_T("Choose the Command Targets"),_T(""),_T(""),wild,wxFD_OPEN|wxFD_FILE_MUST_EXIST|wxMULTIPLE);
     if(fd->ShowModal()==wxID_OK)
     {
         wxArrayString paths;

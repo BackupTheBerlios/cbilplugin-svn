@@ -1,8 +1,4 @@
-#ifdef CB_AUI
-    #include <wx/aui/aui.h>
-#else
-    #include <wx/wxFlatNotebook/wxFlatNotebook.h>
-#endif
+#include <wx/aui/aui.h>
 #include <sdk.h> // Code::Blocks SDK
 #ifndef CB_PRECOMP
     #include <cbauibook.h>
@@ -72,12 +68,7 @@ void FileManagerPlugin::BuildModuleMenu(const ModuleType type, wxMenu* menu, con
 
 void FileManagerPlugin::OnOpenProjectInFileBrowser(wxCommandEvent& event)
 {
-#ifdef CB_AUI
     wxAuiNotebook *m_nb=Manager::Get()->GetProjectManager()->GetNotebook();
-#else
-    wxFlatNotebook *m_nb=Manager::Get()->GetProjectManager()->GetNotebook();
-#endif
-
     m_nb->SetSelection(m_nb->GetPageIndex(m_fe));
     m_fe->SetRootFolder(m_project_selected);
 }

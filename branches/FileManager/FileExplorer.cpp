@@ -1,13 +1,7 @@
 #include "FileExplorer.h"
 #include <wx/dir.h>
 #include <wx/filename.h>
-
-#ifdef CB_AUI
-    #include <wx/aui/aui.h>
-#else
-    #include <wx/wxFlatNotebook/wxFNBDropTarget.h>
-    #include <wx/wxFlatNotebook/wxFlatNotebook.h>
-#endif
+#include <wx/aui/aui.h>
 
 
 #include <sdk.h>
@@ -119,15 +113,8 @@ public:
    {
        m_file=new wxFileDataObject;
        Add(m_file,true);
-       #ifndef CB_AUI
-       m_notepage=new wxFNBDragInfoDataObject(_("wxFNB"));
-       Add(m_notepage);
-       #endif
    }
    wxFileDataObject *m_file;
-   #ifndef CB_AUI
-   wxFNBDragInfoDataObject *m_notepage;
-   #endif
 
 };
 
@@ -144,38 +131,6 @@ public:
     virtual wxDragResult OnData(wxCoord x, wxCoord y, wxDragResult def)
     {
         GetData();
-        #ifndef CB_AUI
-        if(m_data_object->GetReceivedFormat().GetId()==_("wxFNB"))
-        {
-            wxFNBDragInfo data;
-            m_data_object->GetDataHere(_("wxFNB"),&data);
-            wxFlatNotebook *fnb=(wxFlatNotebook*)(data.GetContainer()->GetParent());
-            //wxWindow *wnd=((wxFNBDragInfoDataObject*)m_data_object)->GetData()->GetContainer();
-            wxTreeCtrl *tree=m_fe->m_Tree;
-            int flags;
-            wxTreeItemId id=tree->HitTest(wxPoint(x,y),flags);
-            if(!id.IsOk())
-                return wxDragCancel;
-            if(tree->GetItemImage(id)!=fvsFolder)
-                return wxDragCancel;
-            if(!(flags&(wxTREE_HITTEST_ONITEMICON|wxTREE_HITTEST_ONITEMLABEL)))
-                return wxDragCancel;
-            EditorManager* em = Manager::Get()->GetEditorManager();
-            EditorBase* eb = em->GetActiveEditor();
-            if(eb!=fnb->GetPage(data.GetPageIndex()))
-            {
-                LogMessage(_("FileExplorer: Dropped page not the active editor."));
-                return wxDragCancel;
-            }
-            wxFileName curname(eb->GetFilename());
-            wxFileName destpath(m_fe->GetFullPath(id),curname.GetFullName());
-            //if(eb->SaveAs(destpath.GetPath(),destpath.GetName()))
-            if(eb->SaveAs()) //TODO: This code does nothing, the line about requires a patch to cbEditor::SaveAs
-                return wxDragCopy;
-            return def;
-        }
-        else
-        #endif
         if(m_data_object->GetReceivedFormat().GetType()==wxDF_FILENAME )
         {
             wxArrayString as=m_data_object->m_file->GetFilenames();
@@ -327,7 +282,6 @@ FileExplorer::FileExplorer(wxWindow *parent,wxWindowID id,
     m_Tree = new FileTreeCtrl(this, ID_FILETREE);
     m_Tree->SetIndent(m_Tree->GetIndent()/2);
     m_Tree->SetDropTarget(m_droptarget);
-    //new wxFNBDropTarget<FileExplorer>(this, &FileExplorer::OnDropFlatNotebook));
     m_Loc = new wxComboBox(this,ID_FILELOC,_T(""),wxDefaultPosition,wxDefaultSize,0,NULL,wxTE_PROCESS_ENTER|wxCB_DROPDOWN);
     m_WildCards = new wxComboBox(this,ID_FILEWILD,_T(""),wxDefaultPosition,wxDefaultSize,0,NULL,wxTE_PROCESS_ENTER|wxCB_DROPDOWN);
     m_UpButton = new wxButton(this,ID_FILE_UPBUTTON,_("^"),wxDefaultPosition,wxDefaultSize,wxBU_EXACTFIT);
@@ -1170,6 +1124,7 @@ void FileExplorer::OnRightClick(wxTreeEvent &event)
     if(m_ticount>0)
     {
         if(m_ticount==1)
+        {            
             if(img==fvsFolder)
             {
                 ftd->SetKind(FileTreeData::ftdkFolder);
@@ -1184,6 +1139,7 @@ void FileExplorer::OnRightClick(wxTreeEvent &event)
             {
                 m_Popup->Append(ID_FILERENAME,_T("&Rename..."));
             }
+        }
         if(IsFilesOnly(m_selectti))
         {
             m_Popup->Append(ID_OPENINED,_T("&Open in CB Editor"));
@@ -1430,12 +1386,12 @@ void FileExplorer::OnDelete(wxCommandEvent &event)
     m_ticount=m_Tree->GetSelections(m_selectti);
     wxArrayString as=GetSelectedPaths();
     wxString prompt=_("Your are about to delete\n\n");
-    for(int i=0;i<as.Count();i++)
+    for(unsigned int i=0;i<as.Count();i++)
         prompt+=as[i]+_("\n");
     prompt+=_T("\nAre you sure?");
     if(MessageBox(m_Tree,prompt,_T("Delete"),wxYES_NO)!=wxID_YES)
         return;
-    for(int i=0;i<as.Count();i++)
+    for(unsigned int i=0;i<as.Count();i++)
     {
         wxString path=as[i];  //SINGLE: m_Tree->GetSelection()
         if(wxFileName::FileExists(path))

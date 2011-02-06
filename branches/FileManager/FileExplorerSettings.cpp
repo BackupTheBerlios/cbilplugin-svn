@@ -79,9 +79,11 @@ void FileBrowserSettings::New(wxCommandEvent &event)
 void FileBrowserSettings::Delete(wxCommandEvent &event)
 {
     int i=idfavlist->GetSelection();
+    if(i<0)
+        return;
     m_favdirs.RemoveAt(i);
     idfavlist->Delete(i);
-    if(i>=idfavlist->GetCount())
+    if((unsigned int)i>=idfavlist->GetCount()) //TODO: Perhaps more correct to define unsigned int j, set j=i, then do the comparison
         i--;
     if(i>=0)
     {
@@ -117,7 +119,9 @@ void FileBrowserSettings::OnUp(wxCommandEvent &event)
 void FileBrowserSettings::OnDown(wxCommandEvent &event)
 {
     int i=idfavlist->GetSelection();
-    if(i>=idfavlist->GetCount()-1||i<0)
+    if(i<0)
+        return;
+    if((unsigned int)i>=idfavlist->GetCount()-1) //TODO: Perhaps more correct to define unsigned int j, set j=i, then do the comparison
         return;
     m_favdirs[i].alias=idalias->GetValue();
     m_favdirs[i].path=idpath->GetValue();
@@ -134,7 +138,9 @@ void FileBrowserSettings::OnDown(wxCommandEvent &event)
 void FileBrowserSettings::ChangeSelection(wxCommandEvent &event)
 {
     int i=idfavlist->GetSelection();
-    if(i<0 || i>=idfavlist->GetCount())
+    if(i<0) 
+        return;
+    if((unsigned int)i>=idfavlist->GetCount()) //TODO: Perhaps more correct to define unsigned int j, set j=i, then do the comparison
         return;
     m_favdirs[m_selected].alias=idalias->GetValue();
     m_favdirs[m_selected].path=idpath->GetValue();
@@ -147,7 +153,9 @@ void FileBrowserSettings::ChangeSelection(wxCommandEvent &event)
 
 void FileBrowserSettings::NameChange(wxCommandEvent &event)
 {
-    if(m_selected<0 || m_selected>=idfavlist->GetCount())
+    if(m_selected<0)
+        return;
+    if((unsigned int)m_selected>=idfavlist->GetCount()) //TODO: Perhaps more correct to define unsigned int j, set j=i, then do the comparison
         return;
     idfavlist->SetString(m_selected,idalias->GetValue());
 }

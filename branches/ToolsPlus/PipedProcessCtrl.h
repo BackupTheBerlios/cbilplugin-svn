@@ -8,11 +8,7 @@
 #endif
 
 #include <wx/process.h>
-#ifdef CB_AUI
-    #include <wx/aui/aui.h>
-#else
-    #include <wx/wxFlatNotebook/wxFlatNotebook.h>
-#endif
+#include <wx/aui/aui.h>
 
 #include <sdk.h>
 #ifndef CB_PRECOMP

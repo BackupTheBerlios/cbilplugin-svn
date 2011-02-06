@@ -284,7 +284,7 @@ void PipedProcessCtrl::OnDClick(wxMouseEvent &e)
         return;
     long pos=m_textctrl->PositionFromPoint(e.GetPosition());
     int style=m_textctrl->GetStyleAt(pos);
-    if(style&PP_LINK_STYLE!=PP_LINK_STYLE)
+    if((style&PP_LINK_STYLE)!=PP_LINK_STYLE)
         return; //didn't click a link
     long start=pos;
     while(start>0)

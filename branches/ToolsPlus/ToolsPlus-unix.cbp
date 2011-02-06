@@ -17,23 +17,6 @@
 				<Compiler>
 					<Add option="-Wall" />
 					<Add option="-g" />
-					<Add option="-DCB_AUI" />
-				</Compiler>
-				<ExtraCommands>
-					<Add after="zip -j9 ../../../devel/share/codeblocks/ToolsPlus.zip manifest.xml" />
-				</ExtraCommands>
-			</Target>
-			<Target title="no-aui">
-				<Option output="../../../devel/share/codeblocks/plugins/libToolsPlus.so" prefix_auto="0" extension_auto="0" />
-				<Option working_dir="../../../devel" />
-				<Option object_output="cbplugin/.objs" />
-				<Option type="3" />
-				<Option compiler="gcc" />
-				<Option parameters="--personality=debug" />
-				<Option host_application="../../../devel/codeblocks" />
-				<Compiler>
-					<Add option="-Wall" />
-					<Add option="-g" />
 				</Compiler>
 				<ExtraCommands>
 					<Add after="zip -j9 ../../../devel/share/codeblocks/ToolsPlus.zip manifest.xml" />
@@ -49,7 +32,6 @@
 				<Compiler>
 					<Add option="-Wall" />
 					<Add option="-g" />
-					<Add option="-DCB_AUI" />
 				</Compiler>
 				<Linker>
 					<Add directory="/opt/codeblocks-svn/lib" />

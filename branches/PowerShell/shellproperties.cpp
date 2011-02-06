@@ -1,13 +1,13 @@
 #include "shellproperties.h"
 
-#include <wx/arrimpl.cpp> // this is a magic incantation which must be done!
-//WX_DEFINE_OBJARRAY(ShellCommandMenuVec);
+#include <wx/arrimpl.cpp> 
 WX_DEFINE_OBJARRAY(ShellCommandVec);
 
 wxString istr0(int i)
 {
     return wxString::Format(_T("%i"),i);
 }
+
 
 bool CommandCollection::WriteConfig()
 {
@@ -65,7 +65,7 @@ bool CommandCollection::ExportConfig(const wxString &filename)
     wxFile file(filename, wxFile::write);
     if(!file.IsOpened())
         return false;
-    file.Write(_T("##Power Shell Plugin (v0.5) Command Export##\n"));
+    file.Write(_T("##Tools Plus Plugin (v0.6) Command Export##\n"));
     int len=interps.GetCount();
     for(int i=0;i<len;i++)
     {
@@ -132,8 +132,6 @@ bool CommandCollection::ImportLegacyConfig()
     {
         return false;
     }
-//    if(cbMessageBox(_T("Do you want to convert your old style shell extensions/interpreted langs commands to new style Shell Extension commands?"),_T("Shell Extension Plugin Legacy Import"),wxYES_NO)==wxNO)
-//        return false;
     for(int i=0;i<len;i++)
     {
         wxString istr=istr0(i);

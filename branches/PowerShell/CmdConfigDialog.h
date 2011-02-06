@@ -53,24 +53,25 @@
 #include <configurationpanel.h>
 #include "shellproperties.h"
 
-class PowerShell;
+class ToolsPlus;
 class CommandCollection;
 
-class CmdConfigDialog : public cbConfigurationPanel
+class CmdConfigDialog : public wxDialog
 {
     public:
-		CmdConfigDialog( wxWindow* parent, PowerShell* plugin);
+        CmdConfigDialog(CmdConfigDialog &dlg) {}
+		CmdConfigDialog( wxWindow* parent, ToolsPlus* plugin);
         virtual ~CmdConfigDialog() {}
 
-        virtual wxString GetTitle() const { return _("Power Shell"); }
-        virtual wxString GetBitmapBaseName() const { return _T("PowerShell"); }
-        virtual void OnApply();
-        virtual void OnCancel(){}
+        wxString GetTitle() const { return _("Tools Plus"); }
+        wxString GetBitmapBaseName() const { return _T("ToolsPlus"); }
+        void OnApply();
+        void OnCancel(){}
 
 	private:
         CommandCollection m_ic;
         CommandCollection *m_icperm;
-        PowerShell *m_plugin;
+        ToolsPlus *m_plugin;
         int m_activeinterp;
 //        void UpdateEntry(int index);
 //        void ChooseFile();
@@ -114,6 +115,7 @@ class CmdConfigDialog : public cbConfigurationPanel
 		wxChoice* m_mode;
 		wxStaticText* m_staticText1111;
 		wxChoice* m_envvars;
+		wxWindow *m_prop_panel;
     DECLARE_EVENT_TABLE()
 
 };

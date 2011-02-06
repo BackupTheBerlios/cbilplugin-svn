@@ -2,14 +2,14 @@
 <CodeBlocks_project_file>
 	<FileVersion major="1" minor="6" />
 	<Project>
-		<Option title="Power Shell Plugin" />
+		<Option title="Tools Plus Plugin" />
 		<Option pch_mode="2" />
 		<Option compiler="gcc" />
 		<Build>
 			<Target title="default">
-				<Option output="..\..\..\devel\share\codeblocks\plugins\PowerShell" prefix_auto="1" extension_auto="1" />
+				<Option output="..\..\..\devel\share\codeblocks\plugins\ToolsPlus" prefix_auto="1" extension_auto="1" />
 				<Option working_dir="..\..\..\devel" />
-				<Option object_output="..\..\..\.objs\plugins\contrib\PowerShell" />
+				<Option object_output="..\..\..\.objs\plugins\contrib\ToolsPlus" />
 				<Option type="3" />
 				<Option compiler="gcc" />
 				<Option parameters="--personality=debug -nd -na -ns" />
@@ -43,7 +43,7 @@
 					<Add directory="$(#wx.lib)\gcc_dll$(WX_CFG)" />
 				</Linker>
 				<ExtraCommands>
-					<Add after="zip -j9 ..\..\..\devel\share\codeblocks\PowerShell.zip manifest.xml" />
+					<Add after="zip -j9 ..\..\..\devel\share\codeblocks\ToolsPlus.zip manifest.xml" />
 				</ExtraCommands>
 				<Environment>
 					<Variable name="WX_SUFFIX" value="u" />
@@ -51,7 +51,7 @@
 				</Environment>
 			</Target>
 			<Target title="plugin-binary">
-				<Option output=".\plugin\PowerShell" prefix_auto="1" extension_auto="1" />
+				<Option output=".\plugin\ToolsPlus" prefix_auto="1" extension_auto="1" />
 				<Option working_dir=".\plugin" />
 				<Option object_output=".\objs" />
 				<Option type="3" />
@@ -85,9 +85,9 @@
 					<Add library="$(#cb_bin)\wxscintilla.dll" />
 				</Linker>
 				<ExtraCommands>
-					<Add after="strip plugin\PowerShell.dll" />
-					<Add after="zip -j9 plugin\PowerShell.zip manifest.xml" />
-					<Add after="zip -j9 plugin\PowerShell.cbplugin plugin\PowerShell.zip plugin\PowerShell.dll" />
+					<Add after="strip plugin\ToolsPlus.dll" />
+					<Add after="zip -j9 plugin\ToolsPlus.zip manifest.xml" />
+					<Add after="zip -j9 plugin\ToolsPlus.cbplugin plugin\ToolsPlus.zip plugin\ToolsPlus.dll" />
 				</ExtraCommands>
 				<Environment>
 					<Variable name="WX_SUFFIX" value="u" />
@@ -105,8 +105,8 @@
 		<Unit filename="CmdConfigDialog.h" />
 		<Unit filename="PipedProcessCtrl.cpp" />
 		<Unit filename="PipedProcessCtrl.h" />
-		<Unit filename="PowerShell.cpp" />
-		<Unit filename="PowerShell.h" />
+		<Unit filename="ToolsPlus.cpp" />
+		<Unit filename="ToolsPlus.h" />
 		<Unit filename="Resources\dialogs.fbp" />
 		<Unit filename="ShellCtrlBase.cpp" />
 		<Unit filename="ShellCtrlBase.h" />

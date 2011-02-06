@@ -1,21 +1,20 @@
-#include "PowerShell.h"
+#include "ToolsPlus.h"
 #include "se_globals.h"
 
 // Register the plugin with Code::Blocks.
 // We are using an anonymous namespace so we don't litter the global one.
 namespace
 {
-    PluginRegistrant<PowerShell> reg(_T("PowerShell"));
+    PluginRegistrant<ToolsPlus> reg(_T("ToolsPlus"));
 }
 
 int ID_UpdateUI=wxNewId();
-int ID_LangMenu_Settings=wxNewId();
-int ID_LangMenu_RunPiped=wxNewId();
-int ID_LangMenu_ShowConsole=wxNewId();
-int ID_LangMenu_RemoveTerminated=wxNewId();
+int ID_ToolMenu_Settings=wxNewId();
+int ID_ToolMenu_RunPiped=wxNewId();
+int ID_ToolMenu_ShowConsole=wxNewId();
+int ID_ToolMenu_RemoveTerminated=wxNewId();
+int ID_ToolMenu_Configure=wxNewId();
 int ID_PipedProcess=wxNewId();
-
-int ID_LaunchPythonProcess=wxNewId();
 
 // Ugly ugly hack to handle dynamic menus
 int ID_ContextMenu_0=wxNewId();
@@ -121,26 +120,26 @@ int ID_SubMenu_48=wxNewId();
 int ID_SubMenu_49=wxNewId();
 
 // events handling
-BEGIN_EVENT_TABLE(PowerShell, cbPlugin)
-    EVT_MENU_RANGE(ID_ContextMenu_0,ID_ContextMenu_49,PowerShell::OnRunTarget)
-    EVT_MENU_RANGE(ID_SubMenu_0, ID_SubMenu_49, PowerShell::OnRunTarget)
-    EVT_MENU(ID_LangMenu_ShowConsole,PowerShell::OnShowConsole)
-    EVT_MENU(ID_LangMenu_RemoveTerminated,PowerShell::OnRemoveTerminated)
-//    EVT_MENU(ID_LaunchPythonProcess,PowerShell::OnLaunchPythonProcess)
-    EVT_UPDATE_UI(ID_LangMenu_ShowConsole, PowerShell::OnUpdateUI)
+BEGIN_EVENT_TABLE(ToolsPlus, cbPlugin)
+    EVT_MENU_RANGE(ID_ContextMenu_0,ID_ContextMenu_49,ToolsPlus::OnRunTarget)
+    EVT_MENU_RANGE(ID_SubMenu_0, ID_SubMenu_49, ToolsPlus::OnRunTarget)
+    EVT_MENU(ID_ToolMenu_ShowConsole,ToolsPlus::OnShowConsole)
+    EVT_MENU(ID_ToolMenu_RemoveTerminated,ToolsPlus::OnRemoveTerminated)
+    EVT_MENU(ID_ToolMenu_Configure, ToolsPlus::OnConfigure)
+    EVT_UPDATE_UI(ID_ToolMenu_ShowConsole, ToolsPlus::OnUpdateUI)
 END_EVENT_TABLE()
 
 
-void PowerShell::OnUpdateUI(wxUpdateUIEvent& event)
+void ToolsPlus::OnUpdateUI(wxUpdateUIEvent& event)
 {
-    m_LangMenu->Check(ID_LangMenu_ShowConsole,IsWindowReallyShown(m_shellmgr));
+    m_ToolMenu->Check(ID_ToolMenu_ShowConsole,IsWindowReallyShown(m_shellmgr));
     // allow other UpdateUI handlers to process this event
     // *very* important! don't forget it...
     event.Skip();
 }
 
 
-void PowerShell::OnShowConsole(wxCommandEvent& event)
+void ToolsPlus::OnShowConsole(wxCommandEvent& event)
 {
     // This toggles display of the console I/O window
     CodeBlocksDockEvent evt(event.IsChecked() ? cbEVT_SHOW_DOCK_WINDOW : cbEVT_HIDE_DOCK_WINDOW);
@@ -148,14 +147,25 @@ void PowerShell::OnShowConsole(wxCommandEvent& event)
     Manager::Get()->ProcessEvent(evt);
 }
 
-void PowerShell::OnRemoveTerminated(wxCommandEvent& event)
+void ToolsPlus::OnRemoveTerminated(wxCommandEvent& event)
 {
-    // Removes pages from the powershell window of process that have terminated
+    // Removes pages from the ToolsPlus window of process that have terminated
     m_shellmgr->RemoveDeadPages();
 }
 
 
-void PowerShell::ShowConsole()
+void ToolsPlus::OnConfigure(wxCommandEvent& event)
+{
+    // Open the configuration dialog (global settings/add+remove tools)
+    CmdConfigDialog *dlg = new CmdConfigDialog(NULL, this);
+    int result=dlg->ShowModal();
+    if(result==wxID_OK)
+        dlg->OnApply();
+    dlg->Destroy();
+}
+
+
+void ToolsPlus::ShowConsole()
 {
     // This shows the console I/O window
     CodeBlocksDockEvent evt(cbEVT_SHOW_DOCK_WINDOW);
@@ -163,7 +173,7 @@ void PowerShell::ShowConsole()
     Manager::Get()->ProcessEvent(evt);
 }
 
-void PowerShell::HideConsole()
+void ToolsPlus::HideConsole()
 {
     // This hides display of the console I/O window
     CodeBlocksDockEvent evt(cbEVT_HIDE_DOCK_WINDOW);
@@ -171,12 +181,12 @@ void PowerShell::HideConsole()
     Manager::Get()->ProcessEvent(evt);
 }
 
-void PowerShell::OnSettings(wxCommandEvent& event)
+void ToolsPlus::OnSettings(wxCommandEvent& event)
 {
     cbMessageBox(_T("Settings..."));
 }
 
-void PowerShell::OnSubMenuSelect(wxUpdateUIEvent& event)
+void ToolsPlus::OnSubMenuSelect(wxUpdateUIEvent& event)
 {
 //    int num=event.GetId()-ID_Menu_0;
 //    if(num>=0 && num<=9)
@@ -191,7 +201,7 @@ void PowerShell::OnSubMenuSelect(wxUpdateUIEvent& event)
 //    }
 }
 
-void PowerShell::OnSetTarget(wxCommandEvent& event)
+void ToolsPlus::OnSetTarget(wxCommandEvent& event)
 {
     wxString wild(m_wildcard);
     if(wild==_T(""))
@@ -209,7 +219,7 @@ void PowerShell::OnSetTarget(wxCommandEvent& event)
     delete fd;
 }
 
-void PowerShell::OnSetMultiTarget(wxCommandEvent& event)
+void ToolsPlus::OnSetMultiTarget(wxCommandEvent& event)
 {
     wxString wild(m_wildcard);
     if(wild==_T(""))
@@ -232,7 +242,7 @@ void PowerShell::OnSetMultiTarget(wxCommandEvent& event)
 }
 
 
-void PowerShell::OnSetDirTarget(wxCommandEvent& event)
+void ToolsPlus::OnSetDirTarget(wxCommandEvent& event)
 {
     wxDirDialog *dd=new wxDirDialog(NULL,_T("Choose the Target Directory"),_T(""));
     if(dd->ShowModal()==wxID_OK)
@@ -243,7 +253,7 @@ void PowerShell::OnSetDirTarget(wxCommandEvent& event)
     delete dd;
 }
 
-void PowerShell::OnRunTarget(wxCommandEvent& event)
+void ToolsPlus::OnRunTarget(wxCommandEvent& event)
 {
     int ID=event.GetId();
     wxString commandstr;
@@ -286,7 +296,7 @@ void PowerShell::OnRunTarget(wxCommandEvent& event)
                 OnSetTarget(event);
             if(!wxFileName::FileExists(m_RunTarget))
             {
-                LogMessage(_("Power Shell plugin: ")+m_RunTarget+_(" not found"));
+                LogMessage(_("Tools Plus plugin: ")+m_RunTarget+_(" not found"));
                 return;
             }
         }
@@ -295,7 +305,7 @@ void PowerShell::OnRunTarget(wxCommandEvent& event)
             OnSetDirTarget(event);
             if(!wxFileName::DirExists(m_RunTarget))
             {
-                LogMessage(_("Power Shell plugin: ")+m_RunTarget+_(" not found"));
+                LogMessage(_("Tools Plus plugin: ")+m_RunTarget+_(" not found"));
                 return;
             }
             if(m_RunTarget==_T(""))
@@ -310,7 +320,7 @@ void PowerShell::OnRunTarget(wxCommandEvent& event)
     }
     else
     {
-        LogMessage(wxString::Format(_T("WARNING: Unprocessed Power Shell Menu Message: ID %i, IDbase %i, IDend %i, num items on menu %i"),ID,ID_ContextMenu_0,ID_ContextMenu_49,(int)m_contextvec.size()));
+        LogMessage(wxString::Format(_T("WARNING: Unprocessed Tools Plus Menu Message: ID %i, IDbase %i, IDend %i, num items on menu %i"),ID,ID_ContextMenu_0,ID_ContextMenu_49,(int)m_contextvec.size()));
         return;
     }
 
@@ -370,7 +380,7 @@ void PowerShell::OnRunTarget(wxCommandEvent& event)
     {
         if(!wxSetWorkingDirectory(workingdir))
         {
-            LogMessage(_T("Power Shell Plugin: Can't change to working directory to ")+workingdir);
+            LogMessage(_T("Tools Plus Plugin: Can't change to working directory to ")+workingdir);
             return;
         }
     }
@@ -409,66 +419,35 @@ void PowerShell::OnRunTarget(wxCommandEvent& event)
     wxSetWorkingDirectory(olddir);
 }
 
-void PowerShell::OnLaunchPythonProcess(wxCommandEvent &event)
-{
-    wxString olddir=wxGetCwd();
-    wxArrayString astr;
-    m_shellmgr->LaunchProcess(_T(""),_T("Python"),_T("Python Interpreter"),astr);
-    wxSetWorkingDirectory(olddir);
-}
-
-
-// DEPRECATED - NO LONGER REQUIRED
-void PowerShell::OnRun(wxCommandEvent& event)
-{
-//    int ID=event.GetId();
-//    wxString commandstr;
-//    wxString consolename;
-//    wxMenu *m=m_LangMenu->FindItem(ID)->GetMenu(); // get pointer object to selected item in submenu
-//    for(m_interpnum=0;m_interpnum<m_ic.interps.size()&&m_interpnum<10;m_interpnum++)
-//    {
-//        if(m_LangMenu->FindItem(ID_Menu_0+m_interpnum)->GetSubMenu()==m) //compare pointer to submenu with known submenus and break out if loop if matched
-//            break;
-//    }
-//    if(m_interpnum>=m_ic.interps.size()||m_interpnum>=10)
-//    {
-//        cbMessageBox(_T("Warning: Sub menu not found - cancelling command"));
-//        return;
-//    }
-//    commandstr=m_ic.interps[m_interpnum].command;
-//    consolename=m_ic.interps[m_interpnum].name;
-//
-//    wxExecute(commandstr,wxEXEC_ASYNC);
-////    m_shellmgr->LaunchProcess(commandstr,consolename,0);
-}
 
 // constructor
-PowerShell::PowerShell()
+ToolsPlus::ToolsPlus()
 {
     // Make sure our resources are available.
     // In the generated boilerplate code we have no resources but when
     // we add some, it will be nice that this code is in place already ;)
-    if(!Manager::LoadResource(_T("PowerShell.zip")))
+    if(!Manager::LoadResource(_T("ToolsPlus.zip")))
     {
-        NotifyMissingFile(_T("PowerShell.zip"));
+        NotifyMissingFile(_T("ToolsPlus.zip"));
     }
 }
 
-cbConfigurationPanel* PowerShell::GetConfigurationPanel(wxWindow* parent)
+cbConfigurationPanel* ToolsPlus::GetConfigurationPanel(wxWindow* parent)
 {
 //    MyDialog* dlg = new MyDialog(this, *m_pKeyProfArr, parent,
 //        wxT("Keybindings"), mode);
 
-    return new CmdConfigDialog(parent, this);
+//    return new CmdConfigDialog(parent, this);
+    return NULL;
 }
 
 // destructor
-PowerShell::~PowerShell()
+ToolsPlus::~ToolsPlus()
 {
 
 }
 
-void PowerShell::OnAttach()
+void ToolsPlus::OnAttach()
 {
 	// do whatever initialization you need for your plugin
 	// NOTE: after this function, the inherited member variable
@@ -485,8 +464,8 @@ void PowerShell::OnAttach()
     m_shellmgr = new ShellManager(Manager::Get()->GetAppWindow());
 
     CodeBlocksDockEvent evt(cbEVT_ADD_DOCK_WINDOW);
-    evt.name = _T("Shells");
-    evt.title = _T("Shells");
+    evt.name = _T("Tools");
+    evt.title = _T("Tool Output");
     evt.pWindow = m_shellmgr;
     evt.dockSide = CodeBlocksDockEvent::dsFloating;
     evt.desiredSize.Set(400, 300);
@@ -496,7 +475,7 @@ void PowerShell::OnAttach()
 
 }
 
-void PowerShell::OnRelease(bool appShutDown)
+void ToolsPlus::OnRelease(bool appShutDown)
 {
 	// do de-initialization for your plugin
 	// if appShutDown is false, the plugin is unloaded because Code::Blocks is being shut down,
@@ -514,7 +493,7 @@ void PowerShell::OnRelease(bool appShutDown)
     m_shellmgr = 0;
 }
 
-int PowerShell::Configure()
+int ToolsPlus::Configure()
 {
 	//create and display the configuration dialog for your plugin
 	cbConfigurationDialog dlg(Manager::Get()->GetAppWindow(), wxID_ANY, _("ShellCommand Settings"));
@@ -528,7 +507,7 @@ int PowerShell::Configure()
 	return -1;
 }
 
-void PowerShell::CreateMenu()
+void ToolsPlus::CreateMenu()
 {
     for(unsigned int i=0;i<m_ic.interps.size();i++)
     {
@@ -548,7 +527,7 @@ void PowerShell::CreateMenu()
         if(menuloc.StartsWith(_T(".")))
             continue;
         wxString newmenutext=menuloc.BeforeFirst('/');
-        wxMenu *menu=m_LangMenu;
+        wxMenu *menu=m_ToolMenu;
         while(menuloc.Find('/')!=wxNOT_FOUND)
         {
             menuloc=menuloc.AfterFirst('/');
@@ -569,12 +548,13 @@ void PowerShell::CreateMenu()
         else
             menu->Append(ID_SubMenu_0+i,menuloc);
     }
-    //m_LangMenu->Append(ID_LaunchPythonProcess,_T("Launch Python Interpreter"),_T(""));
-    m_LangMenu->Append(ID_LangMenu_ShowConsole,_T("&Toggle Power Shell I/O Window"),_T(""),wxITEM_CHECK);
-    m_LangMenu->Append(ID_LangMenu_RemoveTerminated,_T("&Close Terminated I/O Tabs"),_T(""));
+    //m_ToolMenu->Append(ID_LaunchPythonProcess,_T("Launch Python Interpreter"),_T(""));
+    m_ToolMenu->Append(ID_ToolMenu_ShowConsole,_T("&Toggle Tool Output Window"),_T(""),wxITEM_CHECK);
+    m_ToolMenu->Append(ID_ToolMenu_RemoveTerminated,_T("Close &Inactive Tool Pages"),_T(""));
+    m_ToolMenu->Append(ID_ToolMenu_Configure,_T("&Configure Tools..."),_T(""));
 }
 
-void PowerShell::AddModuleMenuEntry(wxMenu *modmenu,int entrynum, int idref)
+void ToolsPlus::AddModuleMenuEntry(wxMenu *modmenu,int entrynum, int idref)
 {
     wxString menuloc=m_ic.interps[entrynum].cmenu;
     if(menuloc==_T("."))
@@ -603,41 +583,40 @@ void PowerShell::AddModuleMenuEntry(wxMenu *modmenu,int entrynum, int idref)
 }
 
 
-void PowerShell::UpdateMenu()
+void ToolsPlus::UpdateMenu()
 {
     //delete the old menu items
-    if(m_LangMenu)
+    if(m_ToolMenu)
     {
 //        for(unsigned int i=0;i<m_ic.interps.Len();i++)
-//            m_LangMenu->Destroy(ID_SubMenu_0+i);
-//        m_LangMenu->Destroy(ID_LangMenu_ShowConsole);
-        size_t count=m_LangMenu->GetMenuItemCount();
+//            m_ToolMenu->Destroy(ID_SubMenu_0+i);
+//        m_ToolMenu->Destroy(ID_ToolMenu_ShowConsole);
+        size_t count=m_ToolMenu->GetMenuItemCount();
         for(size_t i=0;i<count;i++)
-            m_LangMenu->Destroy(m_LangMenu->FindItemByPosition(0));
+            m_ToolMenu->Destroy(m_ToolMenu->FindItemByPosition(0));
         CreateMenu();
     }
 }
 
-void PowerShell::BuildMenu(wxMenuBar* menuBar)
+void ToolsPlus::BuildMenu(wxMenuBar* menuBar)
 {
 	//The application is offering its menubar for your plugin,
 	//to add any menu items you want...
 	//Append any items you need in the menu...
 	//NOTE: Be careful in here... The application's menubar is at your disposal.
-	m_LangMenu=new wxMenu;
+	m_ToolMenu=new wxMenu;
 	CreateMenu();
 	int pos = menuBar->FindMenu(_T("Plugins"));
 	if(pos!=wxNOT_FOUND)
-        menuBar->Insert(pos, m_LangMenu, _T("E&xtensions"));
+        menuBar->Insert(pos, m_ToolMenu, _T("T&ools+"));
     else
     {
-        delete m_LangMenu;
-        m_LangMenu=0;
+        delete m_ToolMenu;
+        m_ToolMenu=0;
     }
-//	NotImplemented(_T("PowerShell::BuildMenu()"));
 }
 
-void PowerShell::BuildModuleMenu(const ModuleType type, wxMenu* menu, const FileTreeData* data)
+void ToolsPlus::BuildModuleMenu(const ModuleType type, wxMenu* menu, const FileTreeData* data)
 {
 	//Some library module is ready to display a pop-up menu.
 	//Check the parameter \"type\" and see which module it is
@@ -821,6 +800,6 @@ void PowerShell::BuildModuleMenu(const ModuleType type, wxMenu* menu, const File
             if(added>0)
                 menu->InsertSeparator(sep_pos);
 	    }
-//	NotImplemented(_T("PowerShell::BuildModuleMenu()"));
+//	NotImplemented(_T("ToolsPlus::BuildModuleMenu()"));
 }
 

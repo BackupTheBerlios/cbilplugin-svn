@@ -1,5 +1,5 @@
 /***************************************************************
- * Name:      PowerShell
+ * Name:      ToolsPlus
  * Purpose:   Code::Blocks plugin
  * Author:    Damien Moore ()
  * Created:   2006-09-28
@@ -7,8 +7,8 @@
  * License:   GPL
  **************************************************************/
 
-#ifndef POWERSHELL_H_INCLUDED
-#define POWERSHELL_H_INCLUDED
+#ifndef TOOLSPLUS_H_INCLUDED
+#define TOOLSPLUS_H_INCLUDED
 
 // For compilers that support precompilation, includes <wx/wx.h>
 #include <wx/wxprec.h>
@@ -23,13 +23,13 @@
 #include "CmdConfigDialog.h"
 #include "ShellCtrlBase.h"
 
-class PowerShell : public cbPlugin
+class ToolsPlus : public cbPlugin
 {
     public:
 		/** Constructor. */
-        PowerShell();
+        ToolsPlus();
 		/** Destructor. */
-        virtual ~PowerShell();
+        virtual ~ToolsPlus();
 
 		/** Invoke configuration dialog. */
         virtual int Configure();
@@ -137,16 +137,15 @@ class PowerShell : public cbPlugin
         void OnSetDirTarget(wxCommandEvent& event);
         void OnSetMultiTarget(wxCommandEvent& event);
         void OnRunTarget(wxCommandEvent& event);
-        void OnRun(wxCommandEvent& event);
         void OnRunPiped(wxCommandEvent &event);
         void OnShowConsole(wxCommandEvent& event);
         void OnRemoveTerminated(wxCommandEvent& event);
+        void OnConfigure(wxCommandEvent& event);
         void OnUpdateUI(wxUpdateUIEvent& event);
 
-        void OnLaunchPythonProcess(wxCommandEvent &event);
 
 
-        wxMenu *m_LangMenu;  // pointer to the interpreters menu
+        wxMenu *m_ToolMenu;  // pointer to the interpreters menu
         unsigned int m_interpnum;
         unsigned int m_contextactions[10];
         wxString m_wildcard;
@@ -171,4 +170,4 @@ class PowerShell : public cbPlugin
         DECLARE_EVENT_TABLE();
 };
 
-#endif // POWERSHELL_H_INCLUDED
+#endif // TOOLSPLUS_H_INCLUDED

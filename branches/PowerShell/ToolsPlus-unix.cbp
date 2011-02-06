@@ -2,12 +2,12 @@
 <CodeBlocks_project_file>
 	<FileVersion major="1" minor="6" />
 	<Project>
-		<Option title="Power Shell Plugin" />
+		<Option title="Tools Plus Plugin" />
 		<Option pch_mode="2" />
 		<Option compiler="gcc" />
 		<Build>
 			<Target title="default">
-				<Option output="../../../devel/share/codeblocks/plugins/libPowerShell.so" prefix_auto="0" extension_auto="0" />
+				<Option output="../../../devel/share/codeblocks/plugins/libToolsPlus.so" prefix_auto="0" extension_auto="0" />
 				<Option working_dir="../../../devel" />
 				<Option object_output="cbplugin/.objs" />
 				<Option type="3" />
@@ -20,11 +20,11 @@
 					<Add option="-DCB_AUI" />
 				</Compiler>
 				<ExtraCommands>
-					<Add after="zip -j9 ../../../devel/share/codeblocks/PowerShell.zip manifest.xml" />
+					<Add after="zip -j9 ../../../devel/share/codeblocks/ToolsPlus.zip manifest.xml" />
 				</ExtraCommands>
 			</Target>
 			<Target title="no-aui">
-				<Option output="../../../devel/share/codeblocks/plugins/libPowerShell.so" prefix_auto="0" extension_auto="0" />
+				<Option output="../../../devel/share/codeblocks/plugins/libToolsPlus.so" prefix_auto="0" extension_auto="0" />
 				<Option working_dir="../../../devel" />
 				<Option object_output="cbplugin/.objs" />
 				<Option type="3" />
@@ -36,11 +36,11 @@
 					<Add option="-g" />
 				</Compiler>
 				<ExtraCommands>
-					<Add after="zip -j9 ../../../devel/share/codeblocks/PowerShell.zip manifest.xml" />
+					<Add after="zip -j9 ../../../devel/share/codeblocks/ToolsPlus.zip manifest.xml" />
 				</ExtraCommands>
 			</Target>
 			<Target title="plugin-binary">
-				<Option output="plugin/PowerShell.so" prefix_auto="0" extension_auto="0" />
+				<Option output="plugin/ToolsPlus.so" prefix_auto="0" extension_auto="0" />
 				<Option type="3" />
 				<Option compiler="gcc" />
 				<Option parameters="--personality=debug" />
@@ -55,8 +55,8 @@
 					<Add directory="/opt/codeblocks-svn/lib" />
 				</Linker>
 				<ExtraCommands>
-					<Add after="zip -j9 plugin/PowerShell.zip manifest.xml" />
-					<Add after="zip -j9 plugin/PowerShell.cbplugin plugin/PowerShell.zip plugin/PowerShell.so" />
+					<Add after="zip -j9 plugin/ToolsPlus.zip manifest.xml" />
+					<Add after="zip -j9 plugin/ToolsPlus.cbplugin plugin/ToolsPlus.zip plugin/ToolsPlus.so" />
 				</ExtraCommands>
 			</Target>
 		</Build>
@@ -98,13 +98,13 @@
 		</Unit>
 		<Unit filename="PipedProcessCtrl.cpp" />
 		<Unit filename="PipedProcessCtrl.h" />
-		<Unit filename="PowerShell.cpp">
+		<Unit filename="ToolsPlus.cpp">
 			<Option target="default" />
 			<Option target="se-plugin" />
 			<Option target="detachable" />
 			<Option target="plugin-binary" />
 		</Unit>
-		<Unit filename="PowerShell.h">
+		<Unit filename="ToolsPlus.h">
 			<Option target="default" />
 			<Option target="se-plugin" />
 			<Option target="detachable" />

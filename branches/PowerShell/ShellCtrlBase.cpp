@@ -14,7 +14,7 @@ int ID_SHELLMGR=wxNewId();
 
 bool ShellRegistry::Register(const wxString &name, fnCreate create, fnFree free) //register/deregister are called by the plugin registrant instance
 {
-    Manager::Get()->GetLogManager()->LogError(wxString::Format(_T("Power Shell Plugin: Registering shell type %s"),name.c_str()));
+    Manager::Get()->GetLogManager()->LogError(wxString::Format(_T("Tools Plus Plugin: Registering shell type %s"),name.c_str()));
     std::map<wxString, ShellRegInfo>::iterator it;
     if(m_reginfo.find(name)!=m_reginfo.end())
         return false;

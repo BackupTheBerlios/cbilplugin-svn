@@ -12,8 +12,8 @@
 				<Option object_output="cbplugin/.objs" />
 				<Option type="3" />
 				<Option compiler="gcc" />
-				<Option parameters="--personality=debug" />
-				<Option host_application="../../../devel/codeblocks" />
+				<Option parameters="--personality=debug --safe-mode" />
+				<Option host_application="../../../devel/run.sh" />
 				<Compiler>
 					<Add option="-Wall" />
 					<Add option="-g" />
@@ -44,7 +44,7 @@
 				<Option type="3" />
 				<Option compiler="gcc" />
 				<Option parameters="--personality=debug" />
-				<Option host_application="../../../devel/codeblocks" />
+				<Option host_application="../../../devel/run.sh" />
 				<Option projectLibDirsRelation="1" />
 				<Compiler>
 					<Add option="-Wall" />
@@ -76,8 +76,8 @@
 			<Add option="-DcbDEBUG" />
 			<Add option="-DCB_PRECOMP" />
 			<Add directory="../../../include" />
-			<Add directory="../../../include/wxscintilla/include" />
-			<Add directory="../../../include/wxFlatNotebook/include" />
+			<Add directory="../../../sdk/wxscintilla/include" />
+			<Add directory="../../../sdk" />
 		</Compiler>
 		<Linker>
 			<Add option="`wx-config --libs`" />
@@ -98,6 +98,9 @@
 		</Unit>
 		<Unit filename="PipedProcessCtrl.cpp" />
 		<Unit filename="PipedProcessCtrl.h" />
+		<Unit filename="Resources/dialogs.fbp" />
+		<Unit filename="ShellCtrlBase.cpp" />
+		<Unit filename="ShellCtrlBase.h" />
 		<Unit filename="ToolsPlus.cpp">
 			<Option target="default" />
 			<Option target="se-plugin" />
@@ -110,9 +113,6 @@
 			<Option target="detachable" />
 			<Option target="plugin-binary" />
 		</Unit>
-		<Unit filename="Resources/dialogs.fbp" />
-		<Unit filename="ShellCtrlBase.cpp" />
-		<Unit filename="ShellCtrlBase.h" />
 		<Unit filename="manifest.xml" />
 		<Unit filename="se_globals.cpp">
 			<Option target="default" />

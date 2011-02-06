@@ -4,8 +4,13 @@
     #include <wx/wxFlatNotebook/wxFlatNotebook.h>
 #endif
 #include <sdk.h> // Code::Blocks SDK
+#ifndef CB_PRECOMP
+    #include <cbauibook.h>
+    #include <cbproject.h>
+    #include <projectmanager.h>
+#endif
 //#include <configurationpanel.h>
-
+  
 #include "FileManager.h"
 
 // Register the plugin with Code::Blocks.

@@ -11,7 +11,15 @@
 
 
 #include <sdk.h>
+#ifndef CB_PRECOMP
+    #include <wx/dnd.h>
+ 
+    #include <cbproject.h>
+    #include <configmanager.h>
+    #include <projectmanager.h>
+#endif
 
+#include <list>
 #include <vector>
 #include <iostream>
 
@@ -311,8 +319,8 @@ FileExplorer::FileExplorer(wxWindow *parent,wxWindowID id,
     m_show_hidden=false;
     m_parse_cvs=false;
     m_parse_hg=false;
-    m_parse_bzr=true;
-    m_parse_svn=true;
+    m_parse_bzr=false;
+    m_parse_svn=false;
     wxBoxSizer* bs = new wxBoxSizer(wxVERTICAL);
     wxBoxSizer* bsh = new wxBoxSizer(wxHORIZONTAL);
     wxBoxSizer* bshloc = new wxBoxSizer(wxHORIZONTAL);

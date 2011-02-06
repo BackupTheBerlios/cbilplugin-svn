@@ -8,6 +8,16 @@
 #endif
 
 #include <sdk.h>
+#ifndef CB_PRECOMP
+    #include <wx/dir.h>
+    #include <wx/filename.h>
+    #include <wx/txtstrm.h>
+
+    #include <editorbase.h>
+    #include <editormanager.h>
+    #include <logmanager.h>
+    #include <manager.h>
+#endif
 
 wxString GetParentDir(const wxString &path);
 
